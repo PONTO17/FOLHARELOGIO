@@ -4,12 +4,33 @@
   <meta charset="UTF-8" />
   <title>Cadastro, Lista e Impressão</title>
   <style>
-    /* — todo o CSS permanece igual — */
+    /* ——— CSS ——— */
     *{box-sizing:border-box;font-family:Arial, sans-serif;}
     body{margin:20px;background:#f9f9f9;}
     h2,h3,h4{margin:5px 0;}
     .container-form{width:100%;background:#fff;border:1px solid #ccc;padding:15px;margin-bottom:20px;}
-    /* … (demais regras exatamente como antes) … */
+    .container-form h3{margin-bottom:15px;}
+    .container-form label{display:block;margin-bottom:5px;font-weight:bold;}
+    .container-form input,.container-form textarea{width:100%;padding:8px;margin-bottom:10px;}
+    #search-container{display:none;background:#fff;border:1px solid #ccc;padding:15px;margin-bottom:20px;}
+    .botao-nova-aba{position:fixed;right:10px;top:50px;padding:10px 15px;font-weight:bold;cursor:pointer;background:#007BFF;color:#fff;border:none;border-radius:4px;display:none;}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+    table,th,td{border:1px solid #ccc;}
+    th,td{padding:8px;text-align:center;}
+    .linha-concluida{background-color:#ccffcc!important;}
+    .pay-bullet{display:inline-block;width:12px;height:12px;border-radius:50%;margin-left:5px;vertical-align:middle;}
+    .editing-input{width:95%;background:#fffbe2;border:1px solid #ccc;}
+    .radio-group{margin-bottom:10px;}
+    .radio-group span{font-weight:bold;margin-right:10px;}
+    .radio-group input[type="radio"]{display:none;}
+    .radio-group .radio-btn{display:inline-block;padding:8px 16px;margin-right:5px;border:1px solid #ccc;border-radius:4px;background-color:#f0f0f0;cursor:pointer;transition:background-color .3s,color .3s;}
+    .radio-group input[type="radio"]:checked + .radio-btn{background-color:#007BFF;color:#fff;border-color:#007BFF;}
+    .impressao{display:none;position:absolute;left:-99999px;top:-99999px;}
+    @media print{
+      body *{visibility:hidden!important;}
+      .impressao,.impressao *{visibility:visible!important;}
+      .impressao{display:block!important;position:fixed!important;top:0!important;left:0!important;width:100%!important;background:#fff!important;}
+    }
   </style>
 </head>
 <body>
@@ -17,30 +38,28 @@
 <h2>Cadastro e Impressão</h2>
 
 <script>
-/* ===== CONFIG ===== */
+/* ===== CONFIGURAÇÕES ===== */
 const STORAGE_KEY = 'cadastros_ponto17';
-const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbw2B7te5-GXKqtyavhgDnbQ9PK_Qv1iC3L7rQ60YAUDOwf7qSmTAOLE7oyDRpSti0KwCQ/exec'; // ✅ seu link
+const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbw2B7te5-GXKqtyavhgDnbQ9PK_Qv1iC3L7rQ60YAUDOwf7qSmTAOLE7oyDRpSti0KwCQ/exec';
 
-/* ======= CARREGAR AO ABRIR ======= */
+/* ======== LOCALSTORAGE ======== */
 window.addEventListener('load', () => {
   carregarDoLocal();
-  carregarDaPlanilha();         // tenta sincronizar on‑line
+  carregarDaPlanilha();
 });
-
-/* ——— LocalStorage (mesmo de antes) ——— */
-function salvarNoLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(lerTabela())); }
+function salvarNoLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(lerTabelaCadastros())); }
 function carregarDoLocal(){
   const d = localStorage.getItem(STORAGE_KEY);
   if(d) try{ preencherTabela(JSON.parse(d)); }catch(e){ console.error(e); }
 }
 
-/* ——— Google Sheets ——— */
+/* ======== GOOGLE SHEETS ======== */
 async function carregarDaPlanilha(){
   try{
     const r = await fetch(`${SCRIPT_URL}?action=list`);
     if(!r.ok) throw new Error(r.statusText);
     preencherTabela(await r.json());
-  }catch(e){ console.warn('sem conexão com a planilha:', e.message); }
+  }catch(e){ console.warn('Sem conexão com a planilha:', e.message); }
 }
 async function enviarParaPlanilha(obj){
   try{
@@ -49,35 +68,194 @@ async function enviarParaPlanilha(obj){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(obj)
     });
-  }catch(e){ console.error('falha ao enviar:', e.message); }
+  }catch(e){ console.error('Falha ao enviar:', e.message); }
 }
 
-/* ======= RESTO DO JS (idêntico) ======= */
-/* funções utilitárias, create/edit cells, imprimirRegistro, etc. */
-/* … cole aqui todo o bloco JS que você já tinha …                */
+/* ======== UTILIDADES ======== */
+let registroCount = 1;
+function toggleValorField(){
+  const orcSim = document.getElementById('orcamentoSim');
+  document.getElementById('cad-valor-field').style.display = (orcSim.checked ? 'none' : 'block');
+}
+function formatarValor(v){ const num = parseFloat(v.replace(',','.')); return isNaN(num)?'___':num.toFixed(2).replace('.',','); }
+function parseDate(s){ const p=s.split('/'); return p.length!==3?new Date(0):new Date(+p[2],+p[1]-1,+p[0]); }
+function updateRowStyleStatus(row,st){ st==='CONCLUIDO'?row.classList.add('linha-concluida'):row.classList.remove('linha-concluida'); }
+function getStatusRank(st){ return st==='EM ORÇAMENTO'?0:st==='EM CONSERTO'?1:st==='CONCLUIDO'?2:999; }
+function sortTable(){ const tb=document.querySelector('#lista-cadastros tbody'); [...tb.rows].sort((a,b)=>{ const sa=a.cells[8].querySelector('select').value, sb=b.cells[8].querySelector('select').value; if(sa!==sb)return getStatusRank(sa)-getStatusRank(sb); return parseDate(a.cells[4].textContent)-parseDate(b.cells[4].textContent); }).forEach(r=>tb.appendChild(r)); }
 
-/* -------- confirmarCadastro (apenas final) -------- */
+/* ======== CADASTRO ======== */
 function confirmarCadastro(){
-  /* … gera linha na tabela exatamente como antes … */
+  const nome=document.getElementById('cad-nome').value;
+  const tel=document.getElementById('cad-telefone').value;
+  const obj=document.getElementById('cad-servico').value;
+  const obs=document.getElementById('cad-obs').value;
+  const dias=parseInt(document.getElementById('cad-dias-uteis').value,10);
+  const orc=document.getElementById('orcamentoSim').checked;
+  const val=orc?'ORÇAMENTO':formatarValor(document.getElementById('cad-valor').value);
+  const hoje=new Date(), ent=hoje.toLocaleDateString('pt-BR');
+  let vol=''; if(!isNaN(dias)){ const d=new Date(hoje); d.setDate(d.getDate()+dias); vol=d.toLocaleDateString('pt-BR'); }
 
-  const registroObj = {
-    numero  : row.cells[0].textContent,
-    nome    : row.cells[1].textContent,
-    telefone: row.cells[2].textContent,
-    objetos : row.cells[3].textContent,
-    entrada : row.cells[4].textContent,
-    volta   : row.cells[5].textContent,
-    valor   : row.cells[6].textContent,
-    pagou   : paySelect.value,
-    status  : stSelect.value,
-    obs     : obs
+  const tb=document.querySelector('#lista-cadastros tbody');
+  const row=tb.insertRow(); row.dataset.obs=obs;
+  row.insertCell(0).textContent=registroCount;
+  [nome,tel,obj,ent,vol,val].forEach((v,i)=>row.insertCell(i+1).textContent=v);
+
+  /* pagamento */
+  const pay=row.insertCell(7), sel=document.createElement('select');
+  ['Nao pago','Sinal','Pago'].forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel.appendChild(op);});
+  pay.appendChild(sel); const b=document.createElement('span'); b.className='pay-bullet'; pay.appendChild(b);
+  const upd=v=>{b.style.backgroundColor=v==='Nao pago'?'#f00':v==='Sinal'?'#ff0':'#0f0';}; upd('Nao pago');
+  sel.onchange=()=>{upd(sel.value); salvarNoLocal();};
+
+  /* status */
+  const stC=row.insertCell(8), selS=document.createElement('select');
+  ['EM ORÇAMENTO','EM CONSERTO','CONCLUIDO'].forEach(s=>{const o=document.createElement('option'); o.value=s; o.textContent=s; selS.appendChild(o);});
+  selS.value=orc?'EM ORÇAMENTO':'EM CONSERTO'; selS.dataset.prev=selS.value;
+  selS.onchange=()=>{
+    if(selS.value==='CONCLUIDO' && sel.value!=='Pago'){ alert('Precisa marcar “Pago” antes de concluir.'); selS.value=selS.dataset.prev; return;}
+    if(confirm(`Alterar status para ${selS.value}?`)){ selS.dataset.prev=selS.value; updateRowStyleStatus(row,selS.value); sortTable(); salvarNoLocal();}
+    else selS.value=selS.dataset.prev;
   };
-  enviarParaPlanilha(registroObj);   // 🔗 envia on‑line
-  salvarNoLocal();                   // 💾 guarda off‑line
+  stC.appendChild(selS); updateRowStyleStatus(row,selS.value);
+
+  /* ações */
+  const ac=row.insertCell(9), bt=document.createElement('button'); bt.textContent='Imprimir';
+  bt.onclick=()=>imprimirRegistro(row); ac.appendChild(bt);
+
+  registroCount++; sortTable();
+
+  /* salva */
+  const objEnviar={numero:row.cells[0].textContent,nome,tel,objetos:obj,entrada:ent,volta:vol,valor:val,pagou:sel.value,status:selS.value,obs};
+  enviarParaPlanilha(objEnviar); salvarNoLocal(); window.print();
 }
+
+/* ======== RESTO (ler/preencher tabela, imprimir, etc.) ======== */
+function lerTabelaCadastros(){ return [...document.querySelectorAll('#lista-cadastros tbody tr')].map(tr=>{const c=tr.cells; return{numero:c[0].textContent,nome:c[1].textContent,telefone:c[2].textContent,objetos:c[3].textContent,entrada:c[4].textContent,volta:c[5].textContent,valor:c[6].textContent,pagou:c[7].querySelector('select').value,status:c[8].querySelector('select').value,obs:tr.dataset.obs||''};});}
+function preencherTabela(arr){
+  const tb=document.querySelector('#lista-cadastros tbody'); tb.innerHTML=''; registroCount=1;
+  arr.forEach(d=>{
+    const r=tb.insertRow(); r.dataset.obs=d.obs||''; r.insertCell(0).textContent=d.numero;
+    [d.nome,d.telefone,d.objetos,d.entrada,d.volta,d.valor].forEach((v,i)=>r.insertCell(i+1).textContent=v);
+
+    /* pagamento */
+    const pay=r.insertCell(7), sel=document.createElement('select');
+    ['Nao pago','Sinal','Pago'].forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel.appendChild(op);});
+    sel.value=d.pagou||'Nao pago'; pay.appendChild(sel); const b=document.createElement('span'); b.className='pay-bullet'; pay.appendChild(b);
+    const upd=v=>{b.style.backgroundColor=v==='Nao pago'?'#f00':v==='Sinal'?'#ff0':'#0f0';}; upd(sel.value); sel.onchange=()=>{upd(sel.value); salvarNoLocal();};
+
+    /* status */
+    const st=r.insertCell(8), selS=document.createElement('select');
+    ['EM ORÇAMENTO','EM CONSERTO','CONCLUIDO'].forEach(s=>{const op=document.createElement('option'); op.value=s; op.textContent=s; selS.appendChild(op);});
+    selS.value=d.status||'EM CONSERTO'; selS.dataset.prev=selS.value;
+    selS.onchange=()=>{
+      if(selS.value==='CONCLUIDO' && sel.value!=='Pago'){ alert('Precisa marcar “Pago” antes de concluir.'); selS.value=selS.dataset.prev; return;}
+      if(confirm(`Alterar status para ${selS.value}?`)){ selS.dataset.prev=selS.value; updateRowStyleStatus(r,selS.value); sortTable(); salvarNoLocal();}
+      else selS.value=selS.dataset.prev;
+    };
+    st.appendChild(selS); updateRowStyleStatus(r,selS.value);
+
+    const ac=r.insertCell(9); ac.textContent='(reabra para ações)';
+    const n=parseInt(d.numero,10); if(n>=registroCount) registroCount=n+1;
+  });
+  sortTable();
+}
+function imprimirRegistro(l){const get=i=>l.cells[i].textContent; document.getElementById('print-id').textContent=get(0); document.getElementById('print-nome').textContent=get(1); document.getElementById('print-telefone').textContent=get(2); document.getElementById('print-servico').textContent=get(3); document.getElementById('print-obs').textContent=l.dataset.obs||''; document.getElementById('print-valor').textContent=get(6); document.getElementById('print-data-entrada').textContent=get(4); document.getElementById('print-data-retirada').textContent=get(5); const g=parseDate(get(5)); g.setDate(g.getDate()+90); document.getElementById('print-garantia').textContent=`${String(g.getDate()).padStart(2,'0')}/${String(g.getMonth()+1).padStart(2,'0')}/${g.getFullYear()}`; window.print();}
+function limparCadastro(){['cad-nome','cad-telefone','cad-servico','cad-obs','cad-dias-uteis','cad-valor'].forEach(id=>document.getElementById(id).value=''); document.getElementById('orcamentoNao').checked=true; toggleValorField();}
+
+/* buscar */
+function toggleSearch(){const c=document.getElementById('search-container'); c.style.display=c.style.display==='none'?'block':'none';}
+function searchServices(){const t=document.getElementById('searchTerm').value.toLowerCase(); [...document.querySelector('#lista-cadastros tbody').rows].forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(t)?'':'none';});}
 </script>
 
-<!-- ===== FORM, TABELA, FOLHA DE IMPRESSÃO — exatamente como antes ===== -->
-<!-- (Tudo igual ao arquivo que você já tem; só o JS acima foi alterado) -->
+<!-- ======== FORMULÁRIO ======== -->
+<div class="container-form">
+  <h3>Cadastro</h3>
+
+  <label for="cad-nome">Nome:</label>
+  <input type="text" id="cad-nome" placeholder="Ex: Marcos Antônio">
+
+  <label for="cad-telefone">Telefone:</label>
+  <input type="text" id="cad-telefone" placeholder="Ex: (xx) 99999-9999">
+
+  <label for="cad-servico">Objetos:</label>
+  <input type="text" id="cad-servico" placeholder="Ex: Relógio dourado">
+
+  <label for="cad-obs">DESCRIÇÃO DO SERVIÇO:</label>
+  <textarea id="cad-obs" rows="3"></textarea>
+
+  <label for="cad-dias-uteis">Quantos dias úteis?</label>
+  <input type="number" id="cad-dias-uteis">
+
+  <div class="radio-group">
+    <span>É orçamento?</span>
+    <input type="radio" id="orcamentoSim" name="cad-orcamento" value="sim" onclick="toggleValorField()">
+    <label for="orcamentoSim" class="radio-btn" onclick="toggleValorField()">SIM</label>
+
+    <input type="radio" id="orcamentoNao" name="cad-orcamento" value="nao" checked onclick="toggleValorField()">
+    <label for="orcamentoNao" class="radio-btn" onclick="toggleValorField()">NÃO</label>
+  </div>
+
+  <div id="cad-valor-field">
+    <label for="cad-valor">Valor (R$):</label>
+    <input type="text" id="cad-valor">
+  </div>
+
+  <button onclick="confirmarCadastro()">Confirmar & Imprimir</button>
+  <button onclick="limparCadastro()">Limpar</button>
+</div>
+
+<button onclick="toggleSearch()">BUSCAR SERVIÇO</button>
+<div id="search-container">
+  <h3>Buscar</h3>
+  <input type="text" id="searchTerm"><button onclick="searchServices()">Buscar</button>
+</div>
+
+<h3>Lista de Cadastros</h3>
+<table id="lista-cadastros">
+  <thead>
+    <tr>
+      <th>Nº</th><th>Nome</th><th>Telefone</th><th>Objetos</th><th>Entrada</th>
+      <th>Volta</th><th>Valor</th><th>Pagou?</th><th>Status</th><th>Ações</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<!-- ======== FOLHA DE IMPRESSÃO (escondida) ======== -->
+<div class="impressao" id="folha-impressao">
+  <div class="recibo-header" style="display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:5px;margin-bottom:10px;">
+    <div><h3>PONTO 17</h3><p>Telefones: 3349-3318 / 3229-8972</p></div>
+    <div><h3>Nº <span id="print-id">__</span></h3></div>
+  </div>
+
+  <h3>Serviços Rápidos</h3>
+  <div class="recibo-info">
+    <div><label>Nome: </label><span id="print-nome"></span></div>
+    <div><label>Telefone: </label><span id="print-telefone"></span></div>
+    <div><label>Objetos: </label><span id="print-servico"></span></div>
+    <div><label>Descrição: </label><span id="print-obs"></span></div>
+  </div>
+
+  <hr>
+  <h4>OBJETO/ORÇAMENTO</h4>
+  <div class="recibo-info">
+    <div><label>Valor (R$): </label><span id="print-valor">___</span></div>
+    <div><label>Entrada: </label><span id="print-data-entrada">__/__/__</span></div>
+    <div><label>Retirada: </label><span id="print-data-retirada">__/__/__</span></div>
+    <div><label>Garantia até: </label><span id="print-garantia">__/__/__</span></div>
+  </div>
+
+  <p style="margin-top:10px;font-size:0.9rem;">
+    OBS: ESTOU CIENTE E DE ACORDO COM A ORIENTAÇÃO DO PROCON QUE OS APARELHOS NÃO RETIRADOS NO PRAZO
+    MÁXIMO DE 30 DIAS SERÃO COBRADOS UMA TAXA DE ARMAZENAMENTO DE R$ 1,00 (UM REAL), E NO MÁXIMO 90 DIAS
+    SERÃO VENDIDOS PARA COBRIR CUSTOS OPERACIONAIS, MESMO OS SERVIÇOS JÁ SENDO PAGOS E/OU SINAL DE 50%.
+  </p>
+
+  <div style="display:flex;justify-content:space-between;margin-top:40px;">
+    <div>___________________________<br>Assinatura Cliente</div>
+    <div>___________________________<br>Assinatura Funcionário</div>
+  </div>
+</div>
+
 </body>
 </html>
