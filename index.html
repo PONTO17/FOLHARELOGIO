@@ -1,77 +1,65 @@
-<!-- index.html — agora integrando com Google Sheets -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <title>Cadastro, Lista e Impressão</title>
-  <style>/* (mesmo CSS de antes – mantido) */</style>
+  <style>
+    /* — todo o CSS permanece igual — */
+    *{box-sizing:border-box;font-family:Arial, sans-serif;}
+    body{margin:20px;background:#f9f9f9;}
+    h2,h3,h4{margin:5px 0;}
+    .container-form{width:100%;background:#fff;border:1px solid #ccc;padding:15px;margin-bottom:20px;}
+    /* … (demais regras exatamente como antes) … */
+  </style>
 </head>
 <body>
 
 <h2>Cadastro e Impressão</h2>
 
 <script>
-/* ===== CONFIGURAÇÕES ===== */
+/* ===== CONFIG ===== */
 const STORAGE_KEY = 'cadastros_ponto17';
-const SCRIPT_URL  = 'https://script.google.com/macros/s/COLE_AQUI_O_URL_DO_SEU_WEBAPP/exec'; // ❶ troque depois
+const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbw2B7te5-GXKqtyavhgDnbQ9PK_Qv1iC3L7rQ60YAUDOwf7qSmTAOLE7oyDRpSti0KwCQ/exec'; // ✅ seu link
 
-/* ======== PERSISTÊNCIA LOCAL ======== (igual) */
+/* ======= CARREGAR AO ABRIR ======= */
 window.addEventListener('load', () => {
-  carregarDoLocal();          // offline
-  carregarDaPlanilha();       // online (Google Sheets)
+  carregarDoLocal();
+  carregarDaPlanilha();         // tenta sincronizar on‑line
 });
 
-/* ---------- salvar local --------- */
-function salvarNoLocal(){
-  const cadastros = lerTabelaCadastros();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cadastros));
-}
-
-/* ---------- carregar local -------- */
+/* ——— LocalStorage (mesmo de antes) ——— */
+function salvarNoLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(lerTabela())); }
 function carregarDoLocal(){
-  const dados = localStorage.getItem(STORAGE_KEY);
-  if(dados){
-    try { preencherTabela(JSON.parse(dados)); }
-    catch(e){ console.error(e); }
-  }
+  const d = localStorage.getItem(STORAGE_KEY);
+  if(d) try{ preencherTabela(JSON.parse(d)); }catch(e){ console.error(e); }
 }
 
-/* ---------- carregar da planilha -------- */
+/* ——— Google Sheets ——— */
 async function carregarDaPlanilha(){
   try{
-    const res   = await fetch(`${SCRIPT_URL}?action=list`);
-    if(!res.ok) throw new Error(res.statusText);
-    const json  = await res.json();
-    preencherTabela(json);
-  }catch(err){
-    console.warn('Não foi possível baixar dados da planilha:', err.message);
-  }
+    const r = await fetch(`${SCRIPT_URL}?action=list`);
+    if(!r.ok) throw new Error(r.statusText);
+    preencherTabela(await r.json());
+  }catch(e){ console.warn('sem conexão com a planilha:', e.message); }
 }
-
-/* ---------- enviar 1 registro -------- */
-async function enviarParaPlanilha(reg){
+async function enviarParaPlanilha(obj){
   try{
-    await fetch(SCRIPT_URL, {
-      method : 'POST',
-      headers: {'Content-Type':'application/json'},
-      body   : JSON.stringify(reg)
+    await fetch(SCRIPT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(obj)
     });
-    console.log('Registro enviado à planilha');
-  }catch(e){
-    console.error('Falha ao enviar à planilha:', e.message);
-  }
+  }catch(e){ console.error('falha ao enviar:', e.message); }
 }
 
-/* ======== RESTANTE DO CÓDIGO ========  */
-/* (todo o JavaScript que já existia – 
-   confirmarCadastro, imprimirRegistro, 
-   utilidades, etc. – permanece igual,
-   exceto pelas duas linhas marcadas abaixo) */
+/* ======= RESTO DO JS (idêntico) ======= */
+/* funções utilitárias, create/edit cells, imprimirRegistro, etc. */
+/* … cole aqui todo o bloco JS que você já tinha …                */
 
+/* -------- confirmarCadastro (apenas final) -------- */
 function confirmarCadastro(){
-  /* ... código idêntico até registroCount++ ... */
+  /* … gera linha na tabela exatamente como antes … */
 
-  /* NOVO: objeto com os dados principais ↓  */
   const registroObj = {
     numero  : row.cells[0].textContent,
     nome    : row.cells[1].textContent,
@@ -84,13 +72,12 @@ function confirmarCadastro(){
     status  : stSelect.value,
     obs     : obs
   };
-  enviarParaPlanilha(registroObj);   // ❷ envia online
-  salvarNoLocal();
+  enviarParaPlanilha(registroObj);   // 🔗 envia on‑line
+  salvarNoLocal();                   // 💾 guarda off‑line
 }
-
-/* ======== (restante igual) ======== */
 </script>
 
-<!-- (resto do HTML idêntico ao anterior) -->
+<!-- ===== FORM, TABELA, FOLHA DE IMPRESSÃO — exatamente como antes ===== -->
+<!-- (Tudo igual ao arquivo que você já tem; só o JS acima foi alterado) -->
 </body>
 </html>
