@@ -1,63 +1,128 @@
-/**
- * Constantes Globais
- */
-const NOME_PLANILHA = "Página1"; // Verifique se o nome da sua aba é este.
-const SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
-const SHEET = SPREADSHEET.getSheetByName(NOME_PLANILHA);
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro, Lista e Impressão (Google Sheets Automático)</title>
 
-/**
- * Esta função é chamada para CARREGAR os dados.
- */
-function doGet(e) {
-  try {
-    const data = SHEET.getDataRange().getValues();
-    const headers = data.shift();
-    const json = [];
+  <style>
+    *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+    body{margin:20px;background:#f9f9f9}
+    h2,h3{margin:5px 0}
 
-    data.forEach(row => {
-      let entry = {};
-      row.forEach((value, index) => {
-        if (headers[index]) {
-          entry[headers[index]] = value;
-        }
-      });
-      json.push(entry);
-    });
+    .container-form{background:#fff;border:1px solid #ccc;padding:15px;margin-bottom:20px}
+    .container-form label{display:block;margin-bottom:4px;font-weight:bold}
+    .container-form input,.container-form textarea{width:100%;padding:8px;margin-bottom:10px}
 
-    return ContentService.createTextOutput(JSON.stringify(json)).setMimeType(ContentService.MimeType.JSON);
+    #search-container{display:none;background:#fff;border:1px solid #ccc;padding:15px;margin-bottom:20px}
 
-  } catch (err) {
-    Logger.log(err.toString());
-    return ContentService.createTextOutput(JSON.stringify({ "ok": false, "error": err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+    .botao-nova-aba{position:fixed;right:10px;top:50px;padding:10px 15px;font-weight:bold;cursor:pointer;
+      background:#007BFF;color:#fff;border:none;border-radius:4px;display:none}
+
+    table{width:100%;border-collapse:collapse;margin-bottom:20px}
+    table,th,td{border:1px solid #ccc}
+    th,td{padding:6px;text-align:center}
+
+    .linha-concluida{background:#ccffcc!important}
+    .pay-bullet{display:inline-block;width:11px;height:11px;border-radius:50%;margin-left:4px;vertical-align:middle}
+
+    .impressao{display:none;position:absolute;left:-99999px;top:-99999px}
+    @media print{
+      body *{visibility:hidden!important}
+      .impressao,.impressao *{visibility:visible!important}
+      .impressao{display:block!important;position:fixed!important;top:0;left:0;width:100%!important;background:#fff}
+    }
+  </style>
+
+  <!-- URL da implantação /exec -->
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEq72CenuDSwO1BigkvCPZgn9UrAIfL7Om-H1c04eBrU1G8e0vyGrJrp6h8mmObZ0P/exec";
+  </script>
+</head>
+<body>
+
+<h2>Cadastro e Impressão (Google Sheets Automático)</h2>
+
+<!-- ---------- FORMULÁRIO ---------- -->
+<div class="container-form">
+  <h3>Cadastro</h3>
+
+  <label>Nome:</label><input id="cad-nome" placeholder="Ex: Marcos Antônio">
+  <label>Telefone:</label><input id="cad-telefone" placeholder="Ex: (xx) 99999-9999">
+  <label>Objetos:</label><input id="cad-servico" placeholder="Ex: Relógio (marca) dourado">
+  <label>DESCRIÇÃO DO SERVIÇO:</label><textarea id="cad-obs" rows="3" placeholder="Ex: Troca de bateria e limpeza interna"></textarea>
+  <label>Quantos dias úteis?</label><input type="number" id="cad-dias-uteis" placeholder="Ex: 5">
+
+  <div style="margin:8px 0">
+    <span style="font-weight:bold">É orçamento?</span>
+    <input type="radio" id="orcamentoSim" name="cad-orcamento" value="sim" onclick="toggleValorField()">
+    <label for="orcamentoSim">SIM</label>
+    <input type="radio" id="orcamentoNao" name="cad-orcamento" value="nao" checked onclick="toggleValorField()">
+    <label for="orcamentoNao">NÃO</label>
+  </div>
+
+  <div id="cad-valor-field">
+    <label>Valor (R$):</label><input id="cad-valor" placeholder="Ex: 150,00">
+  </div>
+
+  <button onclick="confirmarCadastro()">Confirmar & Impressão</button>
+  <button onclick="limparCadastro()">Limpar</button>
+</div>
+
+<button onclick="toggleSearch()">BUSCAR SERVIÇO</button>
+<div id="search-container">
+  <h3>Buscar</h3>
+  <input id="searchTerm" placeholder="Digite nome, telefone ou objeto">
+  <button onclick="searchServices()">Buscar</button>
+</div>
+
+<h3>Lista de Cadastros</h3>
+<table id="lista-cadastros">
+  <thead>
+    <tr>
+      <th>Nº</th><th>Nome</th><th>Telefone</th><th>Objetos</th><th>Entrada</th>
+      <th>Volta</th><th>Valor (R$)</th><th>Pagou?</th><th>Status</th><th>Ações</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<button class="botao-nova-aba" id="btnNovaAba" onclick="abrirFolhaEmNovaAba()">Abrir Folha de Impressão</button>
+
+<!-- ---------- FOLHA DE IMPRESSÃO (conteúdo omitido para brevidade, deixe o seu) ---------- -->
+<div class="impressao" id="folha-impressao">
+  <!-- ...  -->
+</div>
+
+<script>
+let registroCount = 1;
+
+/* ------- util ------- */
+function toggleValorField(){document.getElementById('cad-valor-field').style.display = document.getElementById('orcamentoSim').checked?'none':'block';}
+function formatarValor(v){const n=parseFloat((v||'').replace(',','.'));return isNaN(n)?"___":n.toFixed(2).replace('.',',');}
+
+/* ------- carregar ------- */
+window.addEventListener('load',async()=>{
+  try{const arr = await (await fetch(SCRIPT_URL)).json(); preencherTabela(arr); console.log("Carregado do Google!");}
+  catch(e){alert("Erro ao ler do Google: "+e);}
+});
+
+/* ------- salvar ------- */
+async function salvarNoGoogle(){
+  try{
+    const arr = [...document.querySelector('#lista-cadastros tbody').rows].map(r=>({
+      numero:r.cells[0].textContent, nome:r.cells[1].textContent, telefone:r.cells[2].textContent,
+      objetos:r.cells[3].textContent, entrada:r.cells[4].textContent, volta:r.cells[5].textContent,
+      valor:r.cells[6].textContent, pagou:r.cells[7].querySelector('select').value,
+      status:r.cells[8].querySelector('select').value
+    }));
+    await fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(arr)});
+  }catch(e){alert("Falha ao salvar no Google: "+e);}
 }
 
-/**
- * Esta função é chamada para SALVAR os dados. (VERSÃO CORRIGIDA)
- */
-function doPost(e) {
-  try {
-    const cadastros = JSON.parse(e.postData.contents);
+/* ------- restante do JS: preencherTabela, confirmarCadastro, busca, impressão, etc. -------
+   (mantenha o mesmo código que já tinha, só não esqueça de chamar salvarNoGoogle()
+   depois de confirmações ou edições) */
+</script>
 
-    // Limpa os dados antigos com segurança
-    if (SHEET.getLastRow() > 1) {
-      SHEET.getRange(2, 1, SHEET.getLastRow() - 1, SHEET.getLastColumn()).clearContent();
-    }
-
-    // Escreve os novos dados
-    if (cadastros && cadastros.length > 0) {
-      const headers = SHEET.getRange(1, 1, 1, SHEET.getLastColumn()).getValues()[0];
-      const dataToSave = cadastros.map(obj => headers.map(header => obj[header] || ""));
-      SHEET.getRange(2, 1, dataToSave.length, dataToSave[0].length).setValues(dataToSave);
-    }
-
-    return ContentService.createTextOutput(JSON.stringify({ "ok": true }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch (err) {
-    Logger.log(err.toString());
-    return ContentService.createTextOutput(JSON.stringify({ "ok": false, "error": err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+</body>
+</html>
