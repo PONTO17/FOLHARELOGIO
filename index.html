@@ -1,168 +1,63 @@
-<!DOCTYPE html>
-<html lang="pt‑BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Cadastro, Lista e Impressão (Google Sheets Automático)</title>
+/**
+ * Constantes Globais
+ */
+const NOME_PLANILHA = "Página1"; // Verifique se o nome da sua aba é este.
+const SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
+const SHEET = SPREADSHEET.getSheetByName(NOME_PLANILHA);
 
-  <!-- ======= CSS BÁSICO ======= -->
-  <style>
-    *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
-    body{margin:20px;background:#f9f9f9}
-    h2,h3,h4{margin:5px 0}
+/**
+ * Esta função é chamada para CARREGAR os dados.
+ */
+function doGet(e) {
+  try {
+    const data = SHEET.getDataRange().getValues();
+    const headers = data.shift();
+    const json = [];
 
-    /* Formulário */
-    .container-form{width:100%;background:#fff;border:1px solid #ccc;padding:15px;margin-bottom:20px}
-    .container-form label{display:block;margin-bottom:5px;font-weight:bold}
-    .container-form input,.container-form textarea{width:100%;padding:8px;margin-bottom:10px}
+    data.forEach(row => {
+      let entry = {};
+      row.forEach((value, index) => {
+        if (headers[index]) {
+          entry[headers[index]] = value;
+        }
+      });
+      json.push(entry);
+    });
 
-    /* Busca */
-    #search-container{display:none;background:#fff;border:1px solid #ccc;padding:15px;margin-bottom:20px}
+    return ContentService.createTextOutput(JSON.stringify(json)).setMimeType(ContentService.MimeType.JSON);
 
-    /* Botão folha em outra aba */
-    .botao-nova-aba{position:fixed;right:10px;top:50px;padding:10px 15px;font-weight:bold;cursor:pointer;
-      background:#007BFF;color:#fff;border:none;border-radius:4px;display:none}
+  } catch (err) {
+    Logger.log(err.toString());
+    return ContentService.createTextOutput(JSON.stringify({ "ok": false, "error": err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
 
-    /* Tabela */
-    table{width:100%;border-collapse:collapse;margin-bottom:20px}
-    table,th,td{border:1px solid #ccc}
-    th,td{padding:8px;text-align:center}
+/**
+ * Esta função é chamada para SALVAR os dados. (VERSÃO CORRIGIDA)
+ */
+function doPost(e) {
+  try {
+    const cadastros = JSON.parse(e.postData.contents);
 
-    .linha-concluida{background:#ccffcc!important}
-    .pay-bullet{display:inline-block;width:12px;height:12px;border-radius:50%;margin-left:5px;vertical-align:middle}
-
-    /* Impressão */
-    .impressao{display:none;position:absolute;left:-99999px;top:-99999px}
-    @media print{
-      body *{visibility:hidden!important}
-      .impressao,.impressao *{visibility:visible!important}
-      .impressao{display:block!important;position:fixed!important;top:0;left:0;width:100%!important;background:#fff}
+    // Limpa os dados antigos com segurança
+    if (SHEET.getLastRow() > 1) {
+      SHEET.getRange(2, 1, SHEET.getLastRow() - 1, SHEET.getLastColumn()).clearContent();
     }
-  </style>
 
-  <!-- ======= URL DO APPS SCRIPT (nova implantação) ======= -->
-  <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEq72CenuDSwO1BigkvCPZgn9UrAIfL7Om-H1c04eBrU1G8e0vyGrJrp6h8mmObZ0P/exec";
-  </script>
-</head>
-<body>
+    // Escreve os novos dados
+    if (cadastros && cadastros.length > 0) {
+      const headers = SHEET.getRange(1, 1, 1, SHEET.getLastColumn()).getValues()[0];
+      const dataToSave = cadastros.map(obj => headers.map(header => obj[header] || ""));
+      SHEET.getRange(2, 1, dataToSave.length, dataToSave[0].length).setValues(dataToSave);
+    }
 
-<h2>Cadastro e Impressão (Google Sheets Automático)</h2>
+    return ContentService.createTextOutput(JSON.stringify({ "ok": true }))
+      .setMimeType(ContentService.MimeType.JSON);
 
-<!-- ========== FORMULÁRIO ========== -->
-<div class="container-form">
-  <h3>Cadastro</h3>
-
-  <label for="cad-nome">Nome:</label>
-  <input id="cad-nome" placeholder="Ex: Marcos Antônio">
-
-  <label for="cad-telefone">Telefone:</label>
-  <input id="cad-telefone" placeholder="Ex: (xx) 99999‑9999">
-
-  <label for="cad-servico">Objetos:</label>
-  <input id="cad-servico" placeholder="Ex: Relógio (marca) dourado">
-
-  <label for="cad-obs">DESCRIÇÃO DO SERVIÇO:</label>
-  <textarea id="cad-obs" rows="3" placeholder="Ex: Troca de bateria e limpeza interna"></textarea>
-
-  <label for="cad-dias-uteis">Quantos dias úteis?</label>
-  <input type="number" id="cad-dias-uteis" placeholder="Ex: 5">
-
-  <div class="radio-group">
-    <span>É orçamento?</span>
-    <input type="radio" id="orcamentoSim" name="cad-orcamento" value="sim">
-    <label for="orcamentoSim" class="radio-btn" onclick="toggleValorField()">SIM</label>
-    <input type="radio" id="orcamentoNao" name="cad-orcamento" value="nao" checked>
-    <label for="orcamentoNao" class="radio-btn" onclick="toggleValorField()">NÃO</label>
-  </div>
-
-  <div id="cad-valor-field">
-    <label for="cad-valor">Valor (R$):</label>
-    <input id="cad-valor" placeholder="Ex: 150,00">
-  </div>
-
-  <button onclick="confirmarCadastro()">Confirmar & Imprimir</button>
-  <button id="btnLimpar" onclick="limparCadastro()">Limpar</button>
-</div>
-
-<!-- ========== BUSCA ========== -->
-<button onclick="toggleSearch()">BUSCAR SERVIÇO</button>
-<div id="search-container">
-  <h3>Buscar</h3>
-  <input id="searchTerm" placeholder="Digite nome, telefone ou objeto">
-  <button onclick="searchServices()">Buscar</button>
-</div>
-
-<!-- ========== LISTA ========== -->
-<h3>Lista de Cadastros</h3>
-<table id="lista-cadastros">
-  <thead>
-    <tr>
-      <th>Nº</th><th>Nome</th><th>Telefone</th><th>Objetos</th><th>Entrada</th>
-      <th>Volta</th><th>Valor (R$)</th><th>Pagou?</th><th>Status</th><th>Ações</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
-<button class="botao-nova-aba" id="btnNovaAba" onclick="abrirFolhaEmNovaAba()">Abrir Folha de Impressão</button>
-
-<!-- ========== FOLHA DE IMPRESSÃO (esconde até print) ========== -->
-<div class="impressao" id="folha-impressao">
-  <!-- … (mesmo conteúdo da folha de impressão que você já tinha) … -->
-</div>
-
-<!-- ========== JS PRINCIPAL ========== -->
-<script>
-let registroCount = 1;
-
-/* --- Utilidades --- */
-function toggleValorField(){
-  const hide = document.getElementById('orcamentoSim').checked;
-  document.getElementById('cad-valor-field').style.display = hide ? 'none' : 'block';
+  } catch (err) {
+    Logger.log(err.toString());
+    return ContentService.createTextOutput(JSON.stringify({ "ok": false, "error": err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
-function formatarValor(v){const n=parseFloat((v||'').replace(',','.'));return isNaN(n)?"___":n.toFixed(2).replace('.',',');}
-function parseDate(d){const p=d.split('/');return p.length===3?new Date(`${p[2]}-${p[1]}-${p[0]}`):new Date(0);}
-
-/* --- Comunicação Sheets --- */
-window.addEventListener('load',carregarDoGoogle);
-
-async function carregarDoGoogle(){
-  try{
-    const arr = await (await fetch(SCRIPT_URL)).json();
-    preencherTabela(arr);
-  }catch(e){alert("Erro ao ler do Google: "+e);}
-}
-
-async function salvarNoGoogle(){
-  try{
-    const cad = lerTabelaCadastros();
-    const resp = await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(cad)});  /* header removido */
-    const js = await resp.json();
-    if(!js.ok) throw js;
-  }catch(e){alert("Falha ao salvar no Google: "+e);}
-}
-
-/* --- Tabela helpers --- */
-function lerTabelaCadastros(){
-  return [...document.querySelector('#lista-cadastros tbody').rows].map(r=>({
-    numero:r.cells[0].textContent,
-    nome:r.cells[1].textContent,
-    telefone:r.cells[2].textContent,
-    objetos:r.cells[3].textContent,
-    entrada:r.cells[4].textContent,
-    volta:r.cells[5].textContent,
-    valor:r.cells[6].textContent,
-    pagou:r.cells[7].querySelector('select').value,
-    status:r.cells[8].querySelector('select').value
-  }));
-}
-function preencherTabela(arr){/* … igual ao código anterior … */}
-/* (mantenha aqui o restante do JS que já funcionava: criação de linhas, busca, impressão etc.) */
-
-/* --- Cadastro novo --- */
-function confirmarCadastro(){/* … mesmo algoritmo, termina com salvarNoGoogle(); … */}
-
-/* --- Outras funções (buscar, imprimir, etc.) --- */
-</script>
-</body>
-</html>
