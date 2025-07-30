@@ -13,7 +13,7 @@
             --warning-color: #ffc107;
             --light-gray: #f8f9fa;
             --border-color: #dee2e6;
-            --concluido-bg: #e0f7da; /* Verde claro para linhas concluídas */
+            --concluido-bg: #e0f7da;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -62,6 +62,7 @@
         .button-group {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
         .btn {
             padding: 10px 15px;
@@ -74,6 +75,16 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+        }
+        .btn-toggle {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid var(--border-color);
+        }
+        .btn-toggle.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
         }
         .btn-primary { background-color: var(--primary-color); color: white; }
         .btn-primary:hover { background-color: #0056b3; }
@@ -110,17 +121,32 @@
         .status-dot.nao-pago { background-color: var(--danger-color); }
         .status-dot.sinal { background-color: var(--warning-color); }
         .status-dot.pago { background-color: var(--success-color); }
-        .printable-receipt { padding: 20px; color: black; }
-        .printable-receipt h2 { text-align: center; border-bottom: 2px solid black; }
-        .printable-receipt p { font-size: 1.1rem; line-height: 1.6; margin: 10px 0; }
-        .printable-receipt .label { font-weight: bold; }
-
+        
+        /* --- ESTILOS DE IMPRESSÃO --- */
         @media print {
-            .container, .modal-header button { display: none; }
-            body { background-color: white; padding: 0; margin: 0; }
-            .modal-content { border: none; box-shadow: none; width: 100%; margin: 0; padding: 0; }
-            .modal { position: static; display: block !important; overflow: visible; }
-            .printable-receipt { display: block; }
+            body > *:not(#printModal) {
+                display: none; /* Esconde tudo exceto o modal de impressão */
+            }
+            #printModal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: auto;
+                display: block !important;
+                background-color: white;
+                overflow: visible;
+            }
+            .modal-content {
+                box-shadow: none;
+                border: none;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            .modal-header {
+                display: none; /* Esconde o cabeçalho do modal com botões */
+            }
         }
     </style>
 </head>
@@ -136,8 +162,16 @@
                 <div class="form-group"><label for="Telefone">Telefone:</label><input type="tel" id="Telefone" name="Telefone" required></div>
                 <div class="form-group" style="grid-column: 1 / -1;"><label for="Objetos">Objetos:</label><input type="text" id="Objetos" name="Objetos" required></div>
                 <div class="form-group" style="grid-column: 1 / -1;"><label for="DescricaoServico">Descrição do serviço:</label><textarea id="DescricaoServico" name="DescricaoServico"></textarea></div>
+                <div class="form-group">
+                    <label>É orçamento?</label>
+                    <div class="button-group" id="orcamentoToggle">
+                        <button type="button" class="btn btn-toggle active" data-value="SIM">SIM</button>
+                        <button type="button" class="btn btn-toggle" data-value="NÃO">NÃO</button>
+                        <input type="hidden" id="Orcamento" name="Orcamento" value="SIM">
+                    </div>
+                </div>
                 <div class="form-group"><label for="PrazoDias">Prazo (dias):</label><input type="text" id="PrazoDias" name="PrazoDias"></div>
-                <div class="form-group"><label for="Valor">Valor (R$):</label><input type="text" id="Valor" name="Valor" required></div>
+                <div class="form-group" id="valorFormGroup"><label for="Valor">Valor (R$):</label><input type="text" id="Valor" name="Valor"></div>
             </div>
             <div class="actions-bar button-group">
                 <button type="submit" class="btn btn-primary">Adicionar Serviço</button>
@@ -161,14 +195,9 @@
 
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <span class="close-button" id="closeEditModal">&times;</span>
-                <h2>Editar Ordem de Serviço</h2>
-            </div>
+            <div class="modal-header"><span class="close-button" id="closeEditModal">&times;</span><h2>Editar Ordem de Serviço</h2></div>
             <form id="editForm">
-                <input type="hidden" id="editID" name="ID">
-                <input type="hidden" id="editDataEntrada" name="DataEntrada">
-                <input type="hidden" id="editDataPrevistaVolta" name="DataPrevistaVolta">
+                <input type="hidden" id="editID" name="ID"><input type="hidden" id="editDataEntrada" name="DataEntrada"><input type="hidden" id="editDataPrevistaVolta" name="DataPrevistaVolta">
                 <div class="form-grid">
                     <div class="form-group"><label for="editNome">Nome:</label><input type="text" id="editNome" name="Nome" required></div>
                     <div class="form-group"><label for="editTelefone">Telefone:</label><input type="tel" id="editTelefone" name="Telefone" required></div>
@@ -180,9 +209,7 @@
                     <div class="form-group"><label for="editPagou">Status Pagamento:</label><select id="editPagou" name="Pagou"><option value="Nao pago">Nao pago</option><option value="Sinal">Sinal</option><option value="Pago">Pago</option></select></div>
                     <div class="form-group"><label for="editStatus">Status Serviço:</label><select id="editStatus" name="Status"><option value="EM ORÇAMENTO">EM ORÇAMENTO</option><option value="EM CONSERTO">EM CONSERTO</option><option value="CONCLUIDO">CONCLUIDO</option></select></div>
                 </div>
-                <div class="actions-bar button-group">
-                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                </div>
+                <div class="actions-bar button-group"><button type="submit" class="btn btn-primary">Salvar Alterações</button></div>
             </form>
         </div>
     </div>
@@ -193,12 +220,11 @@
             <span class="close-button" id="closePrintModal">&times;</span>
             <button id="printReceiptBtn" class="btn btn-primary" style="float: left;">Imprimir</button>
         </div>
-        <div id="printableReceipt" class="printable-receipt"></div>
+        <div id="printableReceipt"></div>
       </div>
     </div>
 
 <script>
-    // --- CONFIGURAÇÕES E VARIÁVEIS GLOBAIS ---
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzK7vyqG_Cvqb62QX0yQ38j4-8MxVEBhu1ZDgCQOnHe9i66UIgoaQgNuOofzOLPBiSQBg/exec";
     const mainForm = document.getElementById('serviceForm');
     const editForm = document.getElementById('editForm');
@@ -208,9 +234,11 @@
     const formMessage = document.getElementById('formMessage');
     const editModal = document.getElementById('editModal');
     const printModal = document.getElementById('printModal');
+    const orcamentoToggle = document.getElementById('orcamentoToggle');
+    const valorFormGroup = document.getElementById('valorFormGroup');
+    const orcamentoInput = document.getElementById('Orcamento');
     let allServices = [];
 
-    // --- FUNÇÕES DE AJUDA E FORMATAÇÃO ---
     const formatPhone = (value) => value.replace(/\D/g,'').replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').slice(0,15);
     const formatCurrency = (value) => {
         let num = value.replace(/\D/g,'');
@@ -221,7 +249,6 @@
         if (!isoString || typeof isoString !== 'string') return '';
         const date = new Date(isoString);
         if (isNaN(date)) return '';
-        // Adiciona o fuso horário para corrigir a data
         const userTimezoneOffset = date.getTimezoneOffset() * 60000;
         const correctedDate = new Date(date.getTime() + userTimezoneOffset);
         return correctedDate.toLocaleDateString('pt-BR');
@@ -233,19 +260,13 @@
         setTimeout(() => { formMessage.style.display = 'none'; }, 4000);
     };
 
-    // --- MANIPULADORES DE EVENTOS DE FORMATAÇÃO ---
     ['Telefone', 'editTelefone'].forEach(id => document.getElementById(id).addEventListener('input', e => e.target.value = formatPhone(e.target.value)));
     ['Valor', 'editValor'].forEach(id => document.getElementById(id).addEventListener('input', e => e.target.value = formatCurrency(e.target.value)));
 
-    // --- FUNÇÕES DE API ---
     async function fetchFromApi(action, options = {}) {
         const url = new URL(SCRIPT_URL);
         url.searchParams.append('action', action);
-        if (options.params) {
-            for (const key in options.params) {
-                url.searchParams.append(key, options.params[key]);
-            }
-        }
+        if (options.params) for (const key in options.params) url.searchParams.append(key, options.params[key]);
         try {
             const response = await fetch(url, { method: options.method || 'GET', body: options.body });
             const result = await response.json();
@@ -258,7 +279,6 @@
         }
     }
 
-    // --- LÓGICA DE DADOS E RENDERIZAÇÃO ---
     function renderTable(services) {
         tableBody.innerHTML = '';
         if (services.length === 0) {
@@ -266,18 +286,14 @@
             return;
         }
         services.forEach(s => {
-            const paidStatusClass = s.Pagou.toLowerCase().replace(' ', '-'); // nao-pago, sinal, pago
+            const paidStatusClass = s.Pagou.toLowerCase().replace(' ', '-');
             const paidIndicator = `<span class="status-dot ${paidStatusClass}"></span>`;
-            
             const row = document.createElement('tr');
-            if(s.Status === 'CONCLUIDO') {
-                row.classList.add('concluido');
-            }
-
+            if(s.Status === 'CONCLUIDO') row.classList.add('concluido');
             row.innerHTML = `
                 <td>${s.ID}</td><td>${s.Nome}</td><td>${s.Telefone}</td><td>${s.Objetos}</td>
                 <td>${formatDateFromISO(s.DataEntrada)}</td><td>${formatDateFromISO(s.DataPrevistaVolta)}</td>
-                <td>R$ ${typeof s.Valor === 'number' ? s.Valor.toFixed(2).replace('.', ',') : s.Valor}</td>
+                <td>${s.Valor ? 'R$ ' + parseFloat(s.Valor).toFixed(2).replace('.', ',') : '-'}</td>
                 <td>${s.Pagou} ${paidIndicator}</td><td>${s.Status}</td>
                 <td class="button-group">
                     <button class="btn btn-secondary" data-action="edit" data-id="${s.ID}">Editar</button>
@@ -303,35 +319,38 @@
         tableBody.style.display = 'table-row-group';
     }
 
-    // --- MANIPULADORES DE AÇÕES ---
     mainForm.addEventListener('submit', async e => {
         e.preventDefault();
         const btn = e.submitter;
         btn.disabled = true; btn.textContent = 'Enviando...';
         const formData = new FormData(mainForm);
-        formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
-        formData.append('Status', 'EM ORÇAMENTO');
+        const isOrcamento = orcamentoInput.value === 'SIM';
+        
+        if (isOrcamento) {
+            formData.set('Valor', ''); // Garante que o valor seja vazio se for orçamento
+        } else {
+            formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
+        }
+        
+        const initialStatus = isOrcamento ? 'EM ORÇAMENTO' : 'EM CONSERTO';
+        formData.append('Status', initialStatus);
         formData.append('Pagou', 'Nao pago');
-        formData.append('Orcamento', 'SIM');
 
         const result = await fetchFromApi('addService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
         if (result) {
             showMessage('Serviço adicionado com sucesso!', 'success');
             mainForm.reset();
+            updateOrcamentoUI();
             loadAndRenderServices();
         }
         btn.disabled = false; btn.textContent = 'Adicionar Serviço';
     });
     
-    document.getElementById('clearBtn').addEventListener('click', () => mainForm.reset());
-
     tableBody.addEventListener('click', async e => {
         const target = e.target.closest('button');
         if (!target) return;
-
         const action = target.dataset.action;
         const id = target.dataset.id;
-
         if (action === 'edit') {
             const result = await fetchFromApi('getServiceById', { params: { id } });
             if (result) {
@@ -344,32 +363,24 @@
                 editModal.style.display = 'block';
             }
         } else if (action === 'delete') {
-            if (confirm(`Tem certeza que deseja excluir a OS ${id}? Esta ação não pode ser desfeita.`)) {
+            if (confirm(`Tem certeza que deseja excluir a OS ${id}?`)) {
                 const result = await fetchFromApi('deleteService', { method: 'POST', body: new URLSearchParams({ id }) });
-                if (result) {
-                    showMessage(`OS ${id} excluída com sucesso!`, 'success');
-                    loadAndRenderServices();
-                }
+                if (result) loadAndRenderServices();
             }
         } else if (action === 'print') {
             const service = allServices.find(s => s.ID === id);
             if(service) {
-              const receipt = document.getElementById('printableReceipt');
-              receipt.innerHTML = `
+              document.getElementById('printableReceipt').innerHTML = `<div class="printable-receipt">
                 <h2>Ordem de Serviço - Nº ${service.ID}</h2>
                 <p><span class="label">Data de Entrada:</span> ${formatDateFromISO(service.DataEntrada)}</p>
-                <p><span class="label">Data Prev. de Volta:</span> ${formatDateFromISO(service.DataPrevistaVolta)}</p>
-                <hr>
+                <p><span class="label">Data Prev. de Volta:</span> ${formatDateFromISO(service.DataPrevistaVolta)}</p><hr>
                 <p><span class="label">Cliente:</span> ${service.Nome}</p>
-                <p><span class="label">Telefone:</span> ${service.Telefone}</p>
-                <hr>
+                <p><span class="label">Telefone:</span> ${service.Telefone}</p><hr>
                 <p><span class="label">Objeto(s):</span> ${service.Objetos}</p>
-                <p><span class="label">Descrição do Serviço:</span> ${service.DescricaoServico}</p>
-                <hr>
-                <p><span class="label">Valor Total:</span> R$ ${typeof service.Valor === 'number' ? service.Valor.toFixed(2).replace('.', ',') : service.Valor}</p>
+                <p><span class="label">Descrição do Serviço:</span> ${service.DescricaoServico}</p><hr>
+                <p><span class="label">Valor Total:</span> ${service.Valor ? 'R$ ' + parseFloat(service.Valor).toFixed(2).replace('.', ',') : 'A consultar'}</p>
                 <p><span class="label">Status do Pagamento:</span> ${service.Pagou}</p>
-                <p><span class="label">Status do Serviço:</span> ${service.Status}</p>
-              `;
+                <p><span class="label">Status do Serviço:</span> ${service.Status}</p></div>`;
               printModal.style.display = 'block';
             }
         }
@@ -381,14 +392,35 @@
         btn.disabled = true; btn.textContent = 'Salvando...';
         const formData = new FormData(editForm);
         formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
-        
         const result = await fetchFromApi('updateService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
         if (result) {
-            showMessage('Serviço atualizado com sucesso!', 'success');
             editModal.style.display = 'none';
             loadAndRenderServices();
         }
         btn.disabled = false; btn.textContent = 'Salvar Alterações';
+    });
+
+    function updateOrcamentoUI() {
+        const isOrcamento = orcamentoInput.value === 'SIM';
+        valorFormGroup.style.display = isOrcamento ? 'none' : 'flex';
+        document.getElementById('Valor').required = !isOrcamento;
+
+        orcamentoToggle.querySelectorAll('.btn-toggle').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === orcamentoInput.value);
+        });
+    }
+
+    orcamentoToggle.addEventListener('click', e => {
+        if (e.target.matches('.btn-toggle')) {
+            orcamentoInput.value = e.target.dataset.value;
+            updateOrcamentoUI();
+        }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        mainForm.reset();
+        orcamentoInput.value = 'SIM';
+        updateOrcamentoUI();
     });
     
     searchInput.addEventListener('input', e => {
@@ -402,21 +434,20 @@
         renderTable(filtered);
     });
 
-    // --- FECHAR MODAIS ---
-    [document.getElementById('closeEditModal'), document.getElementById('closePrintModal')].forEach(btn => {
-        btn.addEventListener('click', () => {
-            editModal.style.display = 'none';
-            printModal.style.display = 'none';
-        });
-    });
+    [document.getElementById('closeEditModal'), document.getElementById('closePrintModal')].forEach(btn => btn.addEventListener('click', () => {
+        editModal.style.display = 'none';
+        printModal.style.display = 'none';
+    }));
     window.addEventListener('click', e => {
         if (e.target == editModal) editModal.style.display = 'none';
         if (e.target == printModal) printModal.style.display = 'none';
     });
     document.getElementById('printReceiptBtn').addEventListener('click', () => window.print());
 
-    // --- CARGA INICIAL ---
-    document.addEventListener('DOMContentLoaded', loadAndRenderServices);
+    document.addEventListener('DOMContentLoaded', () => {
+        updateOrcamentoUI();
+        loadAndRenderServices();
+    });
 </script>
 </body>
 </html>
