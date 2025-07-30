@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Ordem de Serviço</title>
+    <title>Sistema de Ordem de Serviço - PONTO 17</title>
     <style>
         :root {
             --primary-color: #007bff;
@@ -113,7 +113,7 @@
         .message.success { background-color: #d4edda; color: #155724; }
         .message.error { background-color: #f8d7da; color: #721c24; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,.5); }
-        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 700px; border-radius: 8px; position: relative; }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px; position: relative; }
         .modal-header { padding-bottom: 10px; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: 700; cursor: pointer; }
         .close-button:hover, .close-button:focus { color: black; }
@@ -122,30 +122,70 @@
         .status-dot.sinal { background-color: var(--warning-color); }
         .status-dot.pago { background-color: var(--success-color); }
         
-        /* --- ESTILOS DE IMPRESSÃO --- */
+        /* --- NOVOS ESTILOS PARA IMPRESSÃO --- */
+        .receipt-copy {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+        .receipt-copy:last-child {
+            border-style: dashed;
+        }
+        .receipt-header {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .receipt-subheader {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .receipt-section p {
+            font-size: 1rem;
+            line-height: 1.5;
+            margin: 8px 0;
+        }
+        .receipt-section .label {
+            font-weight: bold;
+        }
+        .legal-notice {
+            font-size: 0.7rem;
+            text-align: justify;
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        .signature-area {
+            margin-top: 40px;
+            text-align: center;
+        }
+        .signature-line {
+            border-top: 1px solid black;
+            width: 70%;
+            margin: 0 auto;
+        }
+        .signature-area p {
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+        
         @media print {
             body > *:not(#printModal) {
-                display: none; /* Esconde tudo exceto o modal de impressão */
+                display: none;
             }
             #printModal {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: auto;
-                display: block !important;
-                background-color: white;
-                overflow: visible;
+                position: absolute; left: 0; top: 0; width: 100%; height: auto;
+                display: block !important; background-color: white; overflow: visible;
             }
             .modal-content {
-                box-shadow: none;
-                border: none;
-                width: 100%;
-                margin: 0;
-                padding: 0;
+                box-shadow: none; border: none; width: 100%; margin: 0; padding: 0;
             }
             .modal-header {
-                display: none; /* Esconde o cabeçalho do modal com botões */
+                display: none;
             }
         }
     </style>
@@ -153,7 +193,7 @@
 <body>
 
     <div class="container" id="mainContainer">
-        <h1>Sistema de Ordem de Serviço</h1>
+        <h1>Sistema de Ordem de Serviço - PONTO 17</h1>
 
         <form id="serviceForm">
             <h2>Novo Cadastro</h2>
@@ -205,7 +245,6 @@
                     <div class="form-group" style="grid-column: 1 / -1;"><label for="editDescricaoServico">Descrição do serviço:</label><textarea id="editDescricaoServico" name="DescricaoServico"></textarea></div>
                     <div class="form-group"><label for="editPrazoDias">Prazo (dias):</label><input type="text" id="editPrazoDias" name="PrazoDias"></div>
                     <div class="form-group"><label for="editValor">Valor (R$):</label><input type="text" id="editValor" name="Valor" required></div>
-                    <div class="form-group"><label for="editOrcamento">É Orçamento?</label><select id="editOrcamento" name="Orcamento"><option value="SIM">SIM</option><option value="NÃO">NÃO</option></select></div>
                     <div class="form-group"><label for="editPagou">Status Pagamento:</label><select id="editPagou" name="Pagou"><option value="Nao pago">Nao pago</option><option value="Sinal">Sinal</option><option value="Pago">Pago</option></select></div>
                     <div class="form-group"><label for="editStatus">Status Serviço:</label><select id="editStatus" name="Status"><option value="EM ORÇAMENTO">EM ORÇAMENTO</option><option value="EM CONSERTO">EM CONSERTO</option><option value="CONCLUIDO">CONCLUIDO</option></select></div>
                 </div>
@@ -325,13 +364,16 @@
         btn.disabled = true; btn.textContent = 'Enviando...';
         const formData = new FormData(mainForm);
         const isOrcamento = orcamentoInput.value === 'SIM';
-        
         if (isOrcamento) {
-            formData.set('Valor', ''); // Garante que o valor seja vazio se for orçamento
+            formData.set('Valor', '');
         } else {
+            if(!formData.get('Valor')) {
+                alert('O campo Valor é obrigatório quando não é um orçamento.');
+                btn.disabled = false; btn.textContent = 'Adicionar Serviço';
+                return;
+            }
             formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
         }
-        
         const initialStatus = isOrcamento ? 'EM ORÇAMENTO' : 'EM CONSERTO';
         formData.append('Status', initialStatus);
         formData.append('Pagou', 'Nao pago');
@@ -355,10 +397,11 @@
             const result = await fetchFromApi('getServiceById', { params: { id } });
             if (result) {
                 const service = result.data;
-                for (const key in service) {
+                // Preenche o formulário de edição, pulando o campo de orçamento que não existe mais
+                ['ID', 'DataEntrada', 'DataPrevistaVolta', 'Nome', 'Telefone', 'Objetos', 'DescricaoServico', 'PrazoDias', 'Pagou', 'Status'].forEach(key => {
                     const input = document.getElementById(`edit${key}`);
                     if (input) input.value = service[key];
-                }
+                });
                 document.getElementById('editValor').value = formatCurrency(String(service.Valor));
                 editModal.style.display = 'block';
             }
@@ -370,17 +413,33 @@
         } else if (action === 'print') {
             const service = allServices.find(s => s.ID === id);
             if(service) {
-              document.getElementById('printableReceipt').innerHTML = `<div class="printable-receipt">
-                <h2>Ordem de Serviço - Nº ${service.ID}</h2>
-                <p><span class="label">Data de Entrada:</span> ${formatDateFromISO(service.DataEntrada)}</p>
-                <p><span class="label">Data Prev. de Volta:</span> ${formatDateFromISO(service.DataPrevistaVolta)}</p><hr>
-                <p><span class="label">Cliente:</span> ${service.Nome}</p>
-                <p><span class="label">Telefone:</span> ${service.Telefone}</p><hr>
-                <p><span class="label">Objeto(s):</span> ${service.Objetos}</p>
-                <p><span class="label">Descrição do Serviço:</span> ${service.DescricaoServico}</p><hr>
-                <p><span class="label">Valor Total:</span> ${service.Valor ? 'R$ ' + parseFloat(service.Valor).toFixed(2).replace('.', ',') : 'A consultar'}</p>
-                <p><span class="label">Status do Pagamento:</span> ${service.Pagou}</p>
-                <p><span class="label">Status do Serviço:</span> ${service.Status}</p></div>`;
+                const legalNoticeHTML = `<div class="legal-notice">“Declaro estar ciente de que, após a notificação de conclusão do serviço, terei 30 dias para retirar o aparelho; vencido esse prazo, será cobrada taxa de guarda de R$ 1,00 por dia, e, caso não o retire em até 90 dias, autorizo o encaminhamento do bem a depósito judicial conforme a legislação vigente.”</div>`;
+                const signatureHTML = `<div class="signature-area"><div class="signature-line"></div><p>Assinatura do Cliente</p></div>`;
+                const serviceDetailsHTML = `<div class="receipt-section">
+                        <p><span class="label">Nº OS:</span> ${service.ID}</p>
+                        <p><span class="label">Data de Entrada:</span> ${formatDateFromISO(service.DataEntrada)} | <span class="label">Data Prev. de Volta:</span> ${formatDateFromISO(service.DataPrevistaVolta)}</p>
+                        <p><span class="label">Cliente:</span> ${service.Nome} | <span class="label">Telefone:</span> ${service.Telefone}</p>
+                        <p><span class="label">Objeto(s):</span> ${service.Objetos}</p>
+                        <p><span class="label">Descrição do Serviço:</span> ${service.DescricaoServico || 'N/A'}</p>
+                        <p><span class="label">Valor Total:</span> ${service.Valor ? 'R$ ' + parseFloat(service.Valor).toFixed(2).replace('.', ',') : 'A consultar'}</p>
+                    </div>`;
+                
+                document.getElementById('printableReceipt').innerHTML = `
+                    <div class="receipt-copy">
+                        <div class="receipt-header">PONTO 17</div>
+                        <div class="receipt-subheader">VIA DA LOJA</div>
+                        ${serviceDetailsHTML}
+                        ${legalNoticeHTML}
+                        ${signatureHTML}
+                    </div>
+                    <div class="receipt-copy">
+                        <div class="receipt-header">PONTO 17</div>
+                        <div class="receipt-subheader">VIA DO CLIENTE</div>
+                        ${serviceDetailsHTML}
+                        ${legalNoticeHTML}
+                        ${signatureHTML}
+                    </div>
+                `;
               printModal.style.display = 'block';
             }
         }
@@ -404,10 +463,7 @@
         const isOrcamento = orcamentoInput.value === 'SIM';
         valorFormGroup.style.display = isOrcamento ? 'none' : 'flex';
         document.getElementById('Valor').required = !isOrcamento;
-
-        orcamentoToggle.querySelectorAll('.btn-toggle').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.value === orcamentoInput.value);
-        });
+        orcamentoToggle.querySelectorAll('.btn-toggle').forEach(btn => btn.classList.toggle('active', btn.dataset.value === orcamentoInput.value));
     }
 
     orcamentoToggle.addEventListener('click', e => {
@@ -425,13 +481,12 @@
     
     searchInput.addEventListener('input', e => {
         const searchTerm = e.target.value.toLowerCase();
-        const filtered = allServices.filter(s =>
+        renderTable(allServices.filter(s =>
             s.Nome.toLowerCase().includes(searchTerm) ||
             s.Objetos.toLowerCase().includes(searchTerm) ||
             s.Telefone.toLowerCase().includes(searchTerm) ||
             s.ID.toLowerCase().includes(searchTerm)
-        );
-        renderTable(filtered);
+        ));
     });
 
     [document.getElementById('closeEditModal'), document.getElementById('closePrintModal')].forEach(btn => btn.addEventListener('click', () => {
