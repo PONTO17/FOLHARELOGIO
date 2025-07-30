@@ -3,328 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro e Impressão</title>
+    <title>Sistema de Ordem de Serviço</title>
     <style>
-        :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --light-gray: #f8f9fa;
-            --border-color: #dee2e6;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #e9ecef;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: auto;
-            background-color: #fff;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1, h2 {
-            color: #333;
-            border-bottom: 2px solid var(--light-gray);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #555;
-        }
-        input[type="text"], input[type="tel"], textarea {
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-        textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
-        .button-group { display: flex; gap: 10px; }
-        .btn {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: background-color 0.2s;
-        }
-        .btn-primary { background-color: var(--primary-color); color: white; }
-        .btn-primary:hover { background-color: #0056b3; }
-        .btn-secondary { background-color: var(--secondary-color); color: white; }
-        .btn-secondary:hover { background-color: #5a6268; }
-        .btn-toggle { background-color: #f0f0f0; color: #333; border: 1px solid var(--border-color); }
-        .btn-toggle.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
-        .actions-bar { margin-top: 25px; }
-        .search-bar {
-            margin: 30px 0;
-            display: flex;
-            gap: 10px;
-        }
-        #searchInput { flex-grow: 1; }
-        .table-wrapper { overflow-x: auto; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        th { background-color: var(--light-gray); }
-        tbody tr:hover { background-color: #f1f1f1; }
-        .status-select { padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); }
-        #loader { text-align: center; padding: 30px; font-size: 1.2rem; }
-        .message { padding: 10px; border-radius: 4px; margin-top: 20px; display: none; }
-        .message.success { background-color: #d4edda; color: #155724; }
-        .message.error { background-color: #f8d7da; color: #721c24; }
+        :root{--primary-color:#007bff;--secondary-color:#6c757d;--success-color:#28a745;--danger-color:#dc3545;--light-gray:#f8f9fa;--border-color:#dee2e6}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background-color:#e9ecef;margin:0;padding:20px}.container{max-width:1200px;margin:auto;background-color:#fff;padding:25px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1)}h1,h2{color:#333;border-bottom:2px solid var(--light-gray);padding-bottom:10px;margin-bottom:20px}.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}.form-group{display:flex;flex-direction:column}label{margin-bottom:5px;font-weight:600;color:#555}input[type=text],input[type=tel],textarea,select{padding:10px;border:1px solid var(--border-color);border-radius:4px;font-size:1rem}textarea{resize:vertical;min-height:60px}.button-group{display:flex;gap:10px}.btn{padding:10px 15px;border:none;border-radius:4px;cursor:pointer;font-size:.9rem;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}.btn-primary{background-color:var(--primary-color);color:#fff}.btn-primary:hover{background-color:#0056b3}.btn-secondary{background-color:var(--secondary-color);color:#fff}.btn-secondary:hover{background-color:#5a6268}.btn-danger{background-color:var(--danger-color);color:#fff}.btn-danger:hover{background-color:#c82333}.actions-bar{margin-top:25px}.table-wrapper{overflow-x:auto}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid var(--border-color);white-space:nowrap}th{background-color:var(--light-gray)}tbody tr:hover{background-color:#f1f1f1}#loader{text-align:center;padding:30px;font-size:1.2rem}.message{padding:10px;border-radius:4px;margin-top:20px;display:none}.message.success{background-color:#d4edda;color:#155724}.message.error{background-color:#f8d7da;color:#721c24}.modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,.5)}.modal-content{background-color:#fefefe;margin:5% auto;padding:20px;border:1px solid #888;width:80%;max-width:700px;border-radius:8px;position:relative}.modal-header{padding-bottom:10px;border-bottom:1px solid #ccc;margin-bottom:20px}.close-button{color:#aaa;float:right;font-size:28px;font-weight:700;cursor:pointer}.close-button:hover,.close-button:focus{color:#000}.status-dot{height:10px;width:10px;background-color:var(--danger-color);border-radius:50%;display:inline-block;margin-left:8px}.printable-receipt{padding:20px;color:#000}.printable-receipt h2{text-align:center;border-bottom:2px solid #000}.printable-receipt p{font-size:1.1rem;line-height:1.6;margin:10px 0}.printable-receipt .label{font-weight:700}@media print{.container,.modal-header button{display:none}body{background-color:#fff;padding:0;margin:0}.modal-content{border:none;box-shadow:none;width:100%;margin:0;padding:0}.modal{position:static;display:block!important;overflow:visible}.printable-receipt{display:block}}
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Cadastro e Impressão (Google Sheets Automático)</h1>
+
+    <div class="container" id="mainContainer">
+        <h1>Sistema de Ordem de Serviço</h1>
         
         <form id="serviceForm">
-            <h2>Cadastro</h2>
+            <h2>Novo Cadastro</h2>
             <div class="form-grid">
-                <div class="form-group"><label for="Nome">Nome:</label><input type="text" id="Nome" name="Nome" placeholder="Ex: Marcos Antônio" required></div>
-                <div class="form-group"><label for="Telefone">Telefone:</label><input type="tel" id="Telefone" name="Telefone" placeholder="Ex: (99) 99999-9999" required></div>
-                <div class="form-group" style="grid-column: 1 / -1;"><label for="Objetos">Objetos:</label><input type="text" id="Objetos" name="Objetos" placeholder="Ex: Relógio (marca) dourado" required></div>
-                <div class="form-group" style="grid-column: 1 / -1;"><label for="DescricaoServico">Descrição do serviço:</label><textarea id="DescricaoServico" name="DescricaoServico" placeholder="Ex: Troca de bateria e limpeza interna"></textarea></div>
-                <div class="form-group"><label for="PrazoDias">Quantos dias úteis?</label><input type="text" id="PrazoDias" name="PrazoDias" placeholder="Ex: 5"></div>
-                <div class="form-group"><label>É orçamento?</label>
-                    <div class="button-group">
-                        <button type="button" class="btn btn-toggle active" data-value="SIM">SIM</button>
-                        <button type="button" class="btn btn-toggle" data-value="NÃO">NÃO</button>
-                        <input type="hidden" id="Orcamento" name="Orcamento" value="SIM">
-                    </div>
-                </div>
-                <div class="form-group"><label for="Valor">Valor (R$):</label><input type="text" id="Valor" name="Valor" placeholder="Ex: 150,00" required></div>
+                <div class="form-group"><label for="Nome">Nome:</label><input type="text" id="Nome" name="Nome" required></div>
+                <div class="form-group"><label for="Telefone">Telefone:</label><input type="tel" id="Telefone" name="Telefone" required></div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label for="Objetos">Objetos:</label><input type="text" id="Objetos" name="Objetos" required></div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label for="DescricaoServico">Descrição do serviço:</label><textarea id="DescricaoServico" name="DescricaoServico"></textarea></div>
+                <div class="form-group"><label for="PrazoDias">Prazo (dias):</label><input type="text" id="PrazoDias" name="PrazoDias"></div>
+                <div class="form-group"><label for="Valor">Valor (R$):</label><input type="text" id="Valor" name="Valor" required></div>
             </div>
             <div class="actions-bar button-group">
-                <button type="submit" class="btn btn-primary">Confirmar & Salvar</button>
+                <button type="submit" class="btn btn-primary">Adicionar Serviço</button>
                 <button type="button" id="clearBtn" class="btn btn-secondary">Limpar</button>
             </div>
             <div id="formMessage" class="message"></div>
         </form>
 
         <div id="listContainer">
-            <h2>Lista de Cadastros</h2>
-            <div class="search-bar">
-                <input type="text" id="searchInput" class="form-control" placeholder="Buscar por nome, objeto ou telefone...">
-            </div>
+            <h2>Lista de Serviços</h2>
+            <input type="text" id="searchInput" placeholder="Buscar por nome, objeto ou telefone..." style="width: calc(100% - 22px); padding: 10px; margin-bottom: 20px;">
             <div class="table-wrapper">
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Nº</th><th>Nome</th><th>Telefone</th><th>Objetos</th><th>Entrada</th><th>Volta</th><th>Valor (R$)</th><th>Pagou?</th><th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="serviceTableBody">
-                        </tbody>
+                    <thead><tr><th>Nº OS</th><th>Nome</th><th>Telefone</th><th>Objetos</th><th>Entrada</th><th>Volta</th><th>Valor (R$)</th><th>Pagou?</th><th>Status</th><th>Ações</th></tr></thead>
+                    <tbody id="serviceTableBody"></tbody>
                 </table>
             </div>
-            <div id="loader">Carregando dados da planilha...</div>
+            <div id="loader">Carregando dados...</div>
         </div>
     </div>
 
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close-button" id="closeEditModal">&times;</span>
+                <h2>Editar Ordem de Serviço</h2>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="editID" name="ID">
+                <input type="hidden" id="editDataEntrada" name="DataEntrada">
+                <input type="hidden" id="editDataPrevistaVolta" name="DataPrevistaVolta">
+                <div class="form-grid">
+                    <div class="form-group"><label for="editNome">Nome:</label><input type="text" id="editNome" name="Nome" required></div>
+                    <div class="form-group"><label for="editTelefone">Telefone:</label><input type="tel" id="editTelefone" name="Telefone" required></div>
+                    <div class="form-group" style="grid-column: 1 / -1;"><label for="editObjetos">Objetos:</label><input type="text" id="editObjetos" name="Objetos" required></div>
+                    <div class="form-group" style="grid-column: 1 / -1;"><label for="editDescricaoServico">Descrição do serviço:</label><textarea id="editDescricaoServico" name="DescricaoServico"></textarea></div>
+                    <div class="form-group"><label for="editPrazoDias">Prazo (dias):</label><input type="text" id="editPrazoDias" name="PrazoDias"></div>
+                    <div class="form-group"><label for="editValor">Valor (R$):</label><input type="text" id="editValor" name="Valor" required></div>
+                    <div class="form-group"><label for="editOrcamento">É Orçamento?</label><select id="editOrcamento" name="Orcamento"><option value="SIM">SIM</option><option value="NÃO">NÃO</option></select></div>
+                    <div class="form-group"><label for="editPagou">Status Pagamento:</label><select id="editPagou" name="Pagou"><option value="Nao pago">Nao pago</option><option value="Sinal">Sinal</option><option value="Pago">Pago</option></select></div>
+                    <div class="form-group"><label for="editStatus">Status Serviço:</label><select id="editStatus" name="Status"><option value="EM ORÇAMENTO">EM ORÇAMENTO</option><option value="EM CONSERTO">EM CONSERTO</option><option value="CONCLUIDO">CONCLUIDO</option></select></div>
+                </div>
+                <div class="actions-bar button-group">
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="printModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+            <span class="close-button" id="closePrintModal">&times;</span>
+            <button id="printReceiptBtn" class="btn btn-primary" style="float: left;">Imprimir</button>
+        </div>
+        <div id="printableReceipt" class="printable-receipt"></div>
+      </div>
+    </div>
+
 <script>
+    // --- CONFIGURAÇÕES E VARIÁVEIS GLOBAIS ---
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzK7vyqG_Cvqb62QX0yQ38j4-8MxVEBhu1ZDgCQOnHe9i66UIgoaQgNuOofzOLPBiSQBg/exec";
-    const form = document.getElementById('serviceForm');
+    const mainForm = document.getElementById('serviceForm');
+    const editForm = document.getElementById('editForm');
     const tableBody = document.getElementById('serviceTableBody');
     const loader = document.getElementById('loader');
     const searchInput = document.getElementById('searchInput');
-    const clearBtn = document.getElementById('clearBtn');
     const formMessage = document.getElementById('formMessage');
+    const editModal = document.getElementById('editModal');
+    const printModal = document.getElementById('printModal');
     let allServices = [];
 
-    // --- MÁSCARAS E FORMATAÇÃO ---
-    const phoneInput = document.getElementById('Telefone');
-    phoneInput.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, '');
-        value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
-        value = value.replace(/(\d{5})(\d)/, '$1-$2');
-        e.target.value = value.slice(0, 15);
-    });
+    // --- FUNÇÕES DE AJUDA E FORMATAÇÃO ---
+    const formatPhone = (value) => value.replace(/\D/g,'').replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').slice(0,15);
+    const formatCurrency = (value) => {
+        let num = value.replace(/\D/g,'');
+        if (num === "") return "";
+        return (parseInt(num, 10) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    };
+    const showMessage = (text, type) => {
+        formMessage.textContent = text;
+        formMessage.className = `message ${type}`;
+        formMessage.style.display = 'block';
+        setTimeout(() => { formMessage.style.display = 'none'; }, 4000);
+    };
 
-    const valueInput = document.getElementById('Valor');
-    valueInput.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, '');
-        value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        if (value === "NaN") value = "";
-        e.target.value = value;
-    });
+    // --- MANIPULADORES DE EVENTOS DE FORMATAÇÃO ---
+    ['Telefone', 'editTelefone'].forEach(id => document.getElementById(id).addEventListener('input', e => e.target.value = formatPhone(e.target.value)));
+    ['Valor', 'editValor'].forEach(id => document.getElementById(id).addEventListener('input', e => e.target.value = formatCurrency(e.target.value)));
 
-    // --- LÓGICA DO BOTÃO DE ORÇAMENTO ---
-    const toggleButtons = document.querySelectorAll('.btn-toggle');
-    const orcamentoInput = document.getElementById('Orcamento');
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            toggleButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            orcamentoInput.value = button.dataset.value;
-        });
-    });
-
-    // --- FUNÇÕES DE COMUNICAÇÃO COM O GOOGLE SHEETS ---
-    async function fetchServices() {
-        loader.style.display = 'block';
-        tableBody.style.display = 'none';
-        try {
-            const response = await fetch(`${SCRIPT_URL}?action=getServices`);
-            const result = await response.json();
-            if (result.success) {
-                allServices = result.data.reverse(); // Mostra os mais recentes primeiro
-                renderTable(allServices);
-            } else {
-                throw new Error(result.error);
+    // --- FUNÇÕES DE API ---
+    async function fetchFromApi(action, options = {}) {
+        const url = new URL(SCRIPT_URL);
+        url.searchParams.append('action', action);
+        if (options.params) {
+            for (const key in options.params) {
+                url.searchParams.append(key, options.params[key]);
             }
-        } catch (error) {
-            loader.textContent = "Erro ao carregar dados. " + error.message;
-        } finally {
-            loader.style.display = 'none';
-            tableBody.style.display = 'table-row-group';
         }
-    }
-
-    async function updateData(action, body) {
         try {
-            const response = await fetch(`${SCRIPT_URL}?action=${action}`, {
-                method: 'POST',
-                body: new URLSearchParams(body)
-            });
+            const response = await fetch(url, { method: options.method || 'GET', body: options.body });
             const result = await response.json();
-            if (!result.success) throw new Error(result.error);
-            return true;
+            if (!result.success) throw new Error(result.error || 'Erro desconhecido');
+            return result;
         } catch (error) {
-            alert("Erro ao atualizar: " + error.message);
-            return false;
+            console.error(`Erro na ação ${action}:`, error);
+            alert(`Falha na operação: ${error.message}`);
+            return null;
         }
     }
 
-    // --- RENDERIZAÇÃO DA TABELA ---
+    // --- LÓGICA DE DADOS E RENDERIZAÇÃO ---
     function renderTable(services) {
         tableBody.innerHTML = '';
         if (services.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum serviço encontrado.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum serviço encontrado.</td></tr>';
             return;
         }
-        services.forEach(service => {
+        services.forEach(s => {
+            const paidIndicator = s.Pagou === 'Nao pago' ? '<span class="status-dot"></span>' : '';
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${service.ID}</td>
-                <td>${service.Nome}</td>
-                <td>${service.Telefone}</td>
-                <td>${service.Objetos}</td>
-                <td>${service.DataEntrada}</td>
-                <td>${service.DataPrevistaVolta}</td>
-                <td>R$ ${typeof service.Valor === 'number' ? service.Valor.toFixed(2).replace('.', ',') : service.Valor}</td>
-                <td>
-                    <select class="paid-status" data-id="${service.ID}">
-                        <option value="NÃO" ${service.Pagou === 'NÃO' ? 'selected' : ''}>NÃO</option>
-                        <option value="SIM" ${service.Pagou === 'SIM' ? 'selected' : ''}>SIM</option>
-                    </select>
-                </td>
-                <td>
-                    <select class="status-select" data-id="${service.ID}">
-                        <option value="Aguardando" ${service.Status === 'Aguardando' ? 'selected' : ''}>Aguardando</option>
-                        <option value="Em Andamento" ${service.Status === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
-                        <option value="Aguardando Peça" ${service.Status === 'Aguardando Peça' ? 'selected' : ''}>Aguardando Peça</option>
-                        <option value="Concluído" ${service.Status === 'Concluído' ? 'selected' : ''}>Concluído</option>
-                        <option value="Entregue" ${service.Status === 'Entregue' ? 'selected' : ''}>Entregue</option>
-                    </select>
+                <td>${s.ID}</td><td>${s.Nome}</td><td>${s.Telefone}</td><td>${s.Objetos}</td>
+                <td>${s.DataEntrada}</td><td>${s.DataPrevistaVolta}</td>
+                <td>R$ ${typeof s.Valor === 'number' ? s.Valor.toFixed(2).replace('.', ',') : s.Valor}</td>
+                <td>${s.Pagou} ${paidIndicator}</td><td>${s.Status}</td>
+                <td class="button-group">
+                    <button class="btn btn-secondary" data-action="edit" data-id="${s.ID}">Editar</button>
+                    <button class="btn btn-danger" data-action="delete" data-id="${s.ID}">Excluir</button>
+                    <button class="btn btn-primary" data-action="print" data-id="${s.ID}">Imprimir</button>
                 </td>
             `;
             tableBody.appendChild(row);
         });
     }
 
-    // --- EVENT LISTENERS ---
-    document.addEventListener('DOMContentLoaded', fetchServices);
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitButton = e.target.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        submitButton.textContent = 'Salvando...';
-        
-        const formData = new FormData(form);
-        const plainFormData = Object.fromEntries(formData.entries());
-        // Limpa a máscara do valor antes de enviar
-        plainFormData.Valor = plainFormData.Valor.replace(/\./g, '').replace(',', '.');
-
-        const success = await updateData('addService', plainFormData);
-        
-        if (success) {
-            form.reset();
-            // Reseta o botão de orçamento para o padrão
-            toggleButtons.forEach(btn => btn.classList.remove('active'));
-            document.querySelector('.btn-toggle[data-value="SIM"]').classList.add('active');
-            orcamentoInput.value = 'SIM';
-
-            showMessage('Serviço cadastrado com sucesso!', 'success');
-            await fetchServices();
+    async function loadAndRenderServices() {
+        loader.style.display = 'block';
+        tableBody.style.display = 'none';
+        const result = await fetchFromApi('getServices');
+        if (result) {
+            allServices = result.data.reverse();
+            renderTable(allServices);
         } else {
-            showMessage('Falha ao cadastrar o serviço.', 'error');
+            loader.textContent = "Erro ao carregar dados.";
         }
-        submitButton.disabled = false;
-        submitButton.textContent = 'Confirmar & Salvar';
-    });
-
-    tableBody.addEventListener('change', (e) => {
-        if (e.target.classList.contains('status-select')) {
-            const id = e.target.dataset.id;
-            const newStatus = e.target.value;
-            updateData('updateStatus', { id: id, value: newStatus });
-        }
-        if (e.target.classList.contains('paid-status')) {
-            const id = e.target.dataset.id;
-            const newPaidStatus = e.target.value;
-            updateData('updatePaidStatus', { id: id, value: newPaidStatus });
-        }
-    });
-    
-    searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filteredServices = allServices.filter(service => 
-            service.Nome.toLowerCase().includes(searchTerm) ||
-            service.Objetos.toLowerCase().includes(searchTerm) ||
-            service.Telefone.toLowerCase().includes(searchTerm)
-        );
-        renderTable(filteredServices);
-    });
-    
-    clearBtn.addEventListener('click', () => {
-        form.reset();
-        showMessage('Formulário limpo.', 'info');
-    });
-
-    function showMessage(text, type) {
-        formMessage.textContent = text;
-        formMessage.className = `message ${type}`;
-        formMessage.style.display = 'block';
-        setTimeout(() => { formMessage.style.display = 'none'; }, 4000);
+        loader.style.display = 'none';
+        tableBody.style.display = 'table-row-group';
     }
 
+    // --- MANIPULADORES DE AÇÕES ---
+    mainForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = e.submitter;
+        btn.disabled = true; btn.textContent = 'Enviando...';
+        const formData = new FormData(mainForm);
+        formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
+        // Adiciona valores padrão para novos serviços
+        formData.append('Status', 'EM ORÇAMENTO');
+        formData.append('Pagou', 'Nao pago');
+        formData.append('Orcamento', 'SIM');
+
+        const result = await fetchFromApi('addService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
+        if (result) {
+            showMessage('Serviço adicionado com sucesso!', 'success');
+            mainForm.reset();
+            loadAndRenderServices();
+        }
+        btn.disabled = false; btn.textContent = 'Adicionar Serviço';
+    });
+    
+    document.getElementById('clearBtn').addEventListener('click', () => mainForm.reset());
+
+    tableBody.addEventListener('click', async e => {
+        const target = e.target;
+        if (!target.matches('button')) return;
+
+        const action = target.dataset.action;
+        const id = target.dataset.id;
+
+        if (action === 'edit') {
+            const result = await fetchFromApi('getServiceById', { params: { id } });
+            if (result) {
+                const service = result.data;
+                for (const key in service) {
+                    const input = document.getElementById(`edit${key}`);
+                    if (input) input.value = service[key];
+                }
+                document.getElementById('editValor').value = formatCurrency(String(service.Valor));
+                editModal.style.display = 'block';
+            }
+        } else if (action === 'delete') {
+            if (confirm(`Tem certeza que deseja excluir a OS ${id}? Esta ação não pode ser desfeita.`)) {
+                const result = await fetchFromApi('deleteService', { method: 'POST', body: new URLSearchParams({ id }) });
+                if (result) {
+                    showMessage(`OS ${id} excluída com sucesso!`, 'success');
+                    loadAndRenderServices();
+                }
+            }
+        } else if (action === 'print') {
+            const service = allServices.find(s => s.ID === id);
+            if(service) {
+              const receipt = document.getElementById('printableReceipt');
+              receipt.innerHTML = `
+                <h2>Ordem de Serviço - Nº ${service.ID}</h2>
+                <p><span class="label">Data de Entrada:</span> ${service.DataEntrada}</p>
+                <p><span class="label">Data Prev. de Volta:</span> ${service.DataPrevistaVolta}</p>
+                <hr>
+                <p><span class="label">Cliente:</span> ${service.Nome}</p>
+                <p><span class="label">Telefone:</span> ${service.Telefone}</p>
+                <hr>
+                <p><span class="label">Objeto(s):</span> ${service.Objetos}</p>
+                <p><span class="label">Descrição do Serviço:</span> ${service.DescricaoServico}</p>
+                <hr>
+                <p><span class="label">Valor Total:</span> R$ ${typeof service.Valor === 'number' ? service.Valor.toFixed(2).replace('.', ',') : service.Valor}</p>
+                <p><span class="label">Status do Pagamento:</span> ${service.Pagou}</p>
+                <p><span class="label">Status do Serviço:</span> ${service.Status}</p>
+              `;
+              printModal.style.display = 'block';
+            }
+        }
+    });
+    
+    editForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = e.submitter;
+        btn.disabled = true; btn.textContent = 'Salvando...';
+        const formData = new FormData(editForm);
+        formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
+        
+        const result = await fetchFromApi('updateService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
+        if (result) {
+            showMessage('Serviço atualizado com sucesso!', 'success');
+            editModal.style.display = 'none';
+            loadAndRenderServices();
+        }
+        btn.disabled = false; btn.textContent = 'Salvar Alterações';
+    });
+    
+    searchInput.addEventListener('input', e => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filtered = allServices.filter(s =>
+            s.Nome.toLowerCase().includes(searchTerm) ||
+            s.Objetos.toLowerCase().includes(searchTerm) ||
+            s.Telefone.toLowerCase().includes(searchTerm) ||
+            s.ID.toLowerCase().includes(searchTerm)
+        );
+        renderTable(filtered);
+    });
+
+    // --- FECHAR MODAIS ---
+    [document.getElementById('closeEditModal'), document.getElementById('closePrintModal')].forEach(btn => {
+        btn.addEventListener('click', () => {
+            editModal.style.display = 'none';
+            printModal.style.display = 'none';
+        });
+    });
+    window.addEventListener('click', e => {
+        if (e.target == editModal) editModal.style.display = 'none';
+        if (e.target == printModal) printModal.style.display = 'none';
+    });
+    document.getElementById('printReceiptBtn').addEventListener('click', () => window.print());
+
+    // --- CARGA INICIAL ---
+    document.addEventListener('DOMContentLoaded', loadAndRenderServices);
 </script>
 </body>
 </html>
