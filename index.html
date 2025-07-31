@@ -28,7 +28,7 @@
         .btn-whatsapp.clicked, .btn-info.clicked { background-color: var(--secondary-color); }
         .btn-info { background-color: var(--info-color); color: white; }
         .actions-bar { margin-top: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .actions-bar .button-group { justify-content: flex-end; flex-grow: 1; }
+        .actions-bar .right-buttons { justify-content: flex-end; }
         .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
@@ -39,6 +39,13 @@
         .status-dot.nao-pago { background-color: var(--danger-color); }
         .status-dot.sinal { background-color: var(--warning-color); }
         .status-dot.pago { background-color: var(--success-color); }
+        .receipt-copy { border: 1px solid #ccc; padding: 15px; margin-bottom: 25px; }
+        .receipt-copy:last-child { border-style: dashed; }
+        .receipt-header { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; }
+        .receipt-subheader { text-align: center; font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .legal-notice { font-size: 0.7rem; text-align: justify; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; }
+        .signature-area { margin-top: 40px; text-align: center; }
+        .signature-line { border-top: 1px solid black; width: 70%; margin: 0 auto; }
         @media print {
             body > *:not(#printModal) { display: none; }
             #printModal { position: absolute; left: 0; top: 0; width: 100%; height: auto; display: block !important; background-color: white; overflow: visible; }
@@ -51,10 +58,45 @@
 
     <div class="container" id="mainContainer">
         <h1>Sistema de Ordem de Serviço - PONTO 17</h1>
-        <form id="serviceForm"></form>
-        <div id="listContainer"></div>
+        <form id="serviceForm">
+            <h2>Novo Cadastro</h2>
+            <div class="form-grid">
+                <div class="form-group"><label for="Nome">Nome:</label><input type="text" id="Nome" name="Nome" required></div>
+                <div class="form-group"><label for="Telefone">Telefone:</label><input type="tel" id="Telefone" name="Telefone" required></div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label for="Objetos">Objetos:</label><input type="text" id="Objetos" name="Objetos" required></div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label for="DescricaoServico">Descrição do serviço:</label><textarea id="DescricaoServico" name="DescricaoServico"></textarea></div>
+                <div class="form-group">
+                    <label>É orçamento?</label>
+                    <div class="button-group" id="orcamentoToggle">
+                        <button type="button" class="btn btn-toggle active" data-value="SIM">SIM</button>
+                        <button type="button" class="btn btn-toggle" data-value="NÃO">NÃO</button>
+                        <input type="hidden" id="Orcamento" name="Orcamento" value="SIM">
+                    </div>
+                </div>
+                <div class="form-group"><label for="PrazoDias">Prazo (dias):</label><input type="text" id="PrazoDias" name="PrazoDias"></div>
+                <div class="form-group" id="valorFormGroup"><label for="Valor">Valor (R$):</label><input type="text" id="Valor" name="Valor"></div>
+            </div>
+            <div class="actions-bar">
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Adicionar Serviço</button>
+                    <button type="button" id="clearBtn" class="btn btn-secondary">Limpar</button>
+                </div>
+            </div>
+            <div id="formMessage" class="message"></div>
+        </form>
+        <div id="listContainer">
+            <h2>Lista de Serviços</h2>
+            <input type="text" id="searchInput" placeholder="Buscar por nome, objeto ou telefone..." style="width: calc(100% - 22px); padding: 10px; margin-bottom: 20px;">
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Nº OS</th><th>Nome</th><th>Telefone</th><th>Objetos</th><th>Entrada</th><th>Volta</th><th>Valor (R$)</th><th>Pagou?</th><th>Status</th><th>Ações</th></tr></thead>
+                    <tbody id="serviceTableBody"></tbody>
+                </table>
+            </div>
+            <div id="loader">Carregando dados...</div>
+        </div>
     </div>
-    
+
     <div id="editModal" class="modal">
         <div class="modal-content">
             <div class="modal-header"><span class="close-button" id="closeEditModal">&times;</span><h2>Editar Ordem de Serviço</h2></div>
@@ -72,7 +114,7 @@
                 </div>
                 <div class="actions-bar">
                     <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                    <div class="button-group">
+                    <div class="button-group right-buttons">
                         <button type="button" id="whatsappBtn" class="btn btn-whatsapp">ENVIAR ORÇAMENTO 📲</button>
                         <button type="button" id="readyBtn" class="btn btn-info">AVISAR PRONTO 📦</button>
                     </div>
@@ -81,115 +123,135 @@
         </div>
     </div>
     
-    <div id="printModal" class="modal"></div>
+    <div id="printModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+            <span class="close-button" id="closePrintModal">&times;</span>
+            <button id="printReceiptBtn" class="btn btn-primary" style="float: left;">Imprimir</button>
+        </div>
+        <div id="printableReceipt"></div>
+      </div>
+    </div>
 
 <script>
-    // --- INÍCIO DO SCRIPT COMPLETO ---
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzK7vyqG_Cvqb62QX0yQ38j4-8MxVEBhu1ZDgCQOnHe9i66UIgoaQgNuOofzOLPBiSQBg/exec";
-    const mainFormContainer = document.getElementById('serviceForm');
-    const listContainer = document.getElementById('listContainer');
-    let editForm, tableBody, loader, searchInput, formMessage, editModal, printModal, orcamentoToggle, valorFormGroup, orcamentoInput, whatsappBtn, readyBtn;
-    let allServices = [];
+    document.addEventListener('DOMContentLoaded', () => {
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzK7vyqG_Cvqb62QX0yQ38j4-8MxVEBhu1ZDgCQOnHe9i66UIgoaQgNuOofzOLPBiSQBg/exec";
+        const mainForm = document.getElementById('serviceForm');
+        const editForm = document.getElementById('editForm');
+        const tableBody = document.getElementById('serviceTableBody');
+        const loader = document.getElementById('loader');
+        const searchInput = document.getElementById('searchInput');
+        const formMessage = document.getElementById('formMessage');
+        const editModal = document.getElementById('editModal');
+        const printModal = document.getElementById('printModal');
+        const orcamentoToggle = document.getElementById('orcamentoToggle');
+        const valorFormGroup = document.getElementById('valorFormGroup');
+        const orcamentoInput = document.getElementById('Orcamento');
+        const whatsappBtn = document.getElementById('whatsappBtn');
+        const readyBtn = document.getElementById('readyBtn');
+        let allServices = [];
 
-    const formatPhone = (value) => value.replace(/\D/g,'').replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').slice(0,15);
-    const formatCurrency = (value) => {
-        let num = value.replace(/\D/g,'');
-        if (num === "") return "";
-        return (parseInt(num, 10) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    };
-    const formatDateFromISO = (isoString) => {
-        if (!isoString || typeof isoString !== 'string') return '';
-        const date = new Date(isoString);
-        if (isNaN(date)) return isoString.split('T')[0];
-        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-        const correctedDate = new Date(date.getTime() + userTimezoneOffset);
-        return correctedDate.toLocaleDateString('pt-BR');
-    };
-    const showMessage = (text, type) => {
-        formMessage.textContent = text;
-        formMessage.className = `message ${type}`;
-        formMessage.style.display = 'block';
-        setTimeout(() => { formMessage.style.display = 'none'; }, 4000);
-    };
+        const formatPhone = (value) => value.replace(/\D/g,'').replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').slice(0,15);
+        const formatCurrency = (value) => {
+            let num = value.replace(/\D/g,'');
+            if (num === "") return "";
+            return (parseInt(num, 10) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        };
+        const formatDateFromISO = (isoString) => {
+            if (!isoString || typeof isoString !== 'string') return '';
+            const date = new Date(isoString);
+            if (isNaN(date)) return isoString.split('T')[0];
+            const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+            const correctedDate = new Date(date.getTime() + userTimezoneOffset);
+            return correctedDate.toLocaleDateString('pt-BR');
+        };
+        const showMessage = (text, type) => {
+            formMessage.textContent = text;
+            formMessage.className = `message ${type}`;
+            formMessage.style.display = 'block';
+            setTimeout(() => { formMessage.style.display = 'none'; }, 4000);
+        };
 
-    async function fetchFromApi(action, options = {}) {
-        const url = new URL(SCRIPT_URL);
-        url.searchParams.append('action', action);
-        if (options.params) for (const key in options.params) url.searchParams.append(key, options.params[key]);
-        try {
-            const response = await fetch(url, { method: options.method || 'GET', body: options.body });
-            const result = await response.json();
-            if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-            return result;
-        } catch (error) {
-            console.error(`Erro na ação ${action}:`, error);
-            alert(`Falha na operação: ${error.message}`);
-            return null;
+        ['Telefone', 'editTelefone'].forEach(id => document.getElementById(id).addEventListener('input', e => e.target.value = formatPhone(e.target.value)));
+        ['Valor', 'editValor'].forEach(id => document.getElementById(id).addEventListener('input', e => e.target.value = formatCurrency(e.target.value)));
+
+        async function fetchFromApi(action, options = {}) {
+            const url = new URL(SCRIPT_URL);
+            url.searchParams.append('action', action);
+            if (options.params) for (const key in options.params) url.searchParams.append(key, options.params[key]);
+            try {
+                const response = await fetch(url, { method: options.method || 'GET', body: options.body });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'Erro desconhecido');
+                return result;
+            } catch (error) {
+                console.error(`Erro na ação ${action}:`, error);
+                loader.textContent = `Falha na operação: ${error.message}`;
+                return null;
+            }
         }
-    }
 
-    function renderTable(services) {
-        tableBody.innerHTML = '';
-        if (services.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum serviço encontrado.</td></tr>';
-            return;
+        function renderTable(services) {
+            tableBody.innerHTML = '';
+            if (services.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum serviço encontrado.</td></tr>';
+                return;
+            }
+            services.forEach(s => {
+                const paidStatusClass = (s.Pagou || '').toLowerCase().replace(' ', '-');
+                const paidIndicator = `<span class="status-dot ${paidStatusClass}"></span>`;
+                const row = document.createElement('tr');
+                if(s.Status === 'CONCLUIDO') row.classList.add('concluido');
+                row.innerHTML = `
+                    <td>${s.ID}</td><td>${s.Nome}</td><td>${s.Telefone}</td><td>${s.Objetos}</td>
+                    <td>${formatDateFromISO(s.DataEntrada)}</td><td>${formatDateFromISO(s.DataPrevistaVolta)}</td>
+                    <td>${s.Valor ? 'R$ ' + parseFloat(s.Valor).toFixed(2).replace('.', ',') : '-'}</td>
+                    <td>${s.Pagou} ${paidIndicator}</td><td>${s.Status}</td>
+                    <td class="button-group">
+                        <button class="btn btn-secondary" data-action="edit" data-id="${s.ID}">Editar</button>
+                        <button class="btn btn-danger" data-action="delete" data-id="${s.ID}">Excluir</button>
+                        <button class="btn btn-primary" data-action="print" data-id="${s.ID}">Imprimir</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
         }
-        services.forEach(s => {
-            const paidStatusClass = (s.Pagou || '').toLowerCase().replace(' ', '-');
-            const paidIndicator = `<span class="status-dot ${paidStatusClass}"></span>`;
-            const row = document.createElement('tr');
-            if(s.Status === 'CONCLUIDO') row.classList.add('concluido');
-            row.innerHTML = `
-                <td>${s.ID}</td><td>${s.Nome}</td><td>${s.Telefone}</td><td>${s.Objetos}</td>
-                <td>${formatDateFromISO(s.DataEntrada)}</td><td>${formatDateFromISO(s.DataPrevistaVolta)}</td>
-                <td>${s.Valor ? 'R$ ' + parseFloat(s.Valor).toFixed(2).replace('.', ',') : '-'}</td>
-                <td>${s.Pagou} ${paidIndicator}</td><td>${s.Status}</td>
-                <td class="button-group">
-                    <button class="btn btn-secondary" data-action="edit" data-id="${s.ID}">Editar</button>
-                    <button class="btn btn-danger" data-action="delete" data-id="${s.ID}">Excluir</button>
-                    <button class="btn btn-primary" data-action="print" data-id="${s.ID}">Imprimir</button>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-    }
 
-    async function loadAndRenderServices() {
-        loader.style.display = 'block';
-        tableBody.style.display = 'none';
-        const result = await fetchFromApi('getServices');
-        if (result) {
-            allServices = result.data.reverse();
-            renderTable(allServices);
-        } else {
-            loader.textContent = "Erro ao carregar dados.";
+        async function loadAndRenderServices() {
+            loader.style.display = 'block';
+            tableBody.style.display = 'none';
+            const result = await fetchFromApi('getServices');
+            loader.style.display = 'none';
+            tableBody.style.display = 'table-row-group';
+            if (result) {
+                allServices = result.data.reverse();
+                renderTable(allServices);
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color: red;">Falha ao carregar os dados. Verifique a planilha e as permissões do script.</td></tr>';
+            }
         }
-        loader.style.display = 'none';
-        tableBody.style.display = 'table-row-group';
-    }
 
-    function updateWhatsappButtonUI() {
-        if (whatsappBtn.dataset.orcamentoEnviado === 'SIM') {
-            whatsappBtn.classList.add('clicked');
-        } else {
-            whatsappBtn.classList.remove('clicked');
+        function updateWhatsappButtonUI() {
+            if (whatsappBtn.dataset.orcamentoEnviado === 'SIM') {
+                whatsappBtn.classList.add('clicked');
+            } else {
+                whatsappBtn.classList.remove('clicked');
+            }
         }
-    }
-    
-    function updateReadyButtonUI() {
-        if (readyBtn.dataset.avisoProntoEnviado === 'SIM') {
-            readyBtn.classList.add('clicked');
-        } else {
-            readyBtn.classList.remove('clicked');
+        
+        function updateReadyButtonUI() {
+            if (readyBtn.dataset.avisoProntoEnviado === 'SIM') {
+                readyBtn.classList.add('clicked');
+            } else {
+                readyBtn.classList.remove('clicked');
+            }
         }
-    }
 
-    function setupEventListeners() {
-        mainFormContainer.addEventListener('submit', async e => {
+        mainForm.addEventListener('submit', async e => {
             e.preventDefault();
             const btn = e.submitter;
             btn.disabled = true; btn.textContent = 'Enviando...';
-            const formData = new FormData(mainFormContainer);
+            const formData = new FormData(mainForm);
             const isOrcamento = orcamentoInput.value === 'SIM';
             if (isOrcamento) {
                 formData.set('Valor', '');
@@ -208,7 +270,7 @@
             const result = await fetchFromApi('addService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
             if (result) {
                 showMessage('Serviço adicionado com sucesso!', 'success');
-                mainFormContainer.reset();
+                mainForm.reset();
                 updateOrcamentoUI();
                 loadAndRenderServices();
             }
@@ -263,6 +325,13 @@
             const btn = e.submitter;
             btn.disabled = true; btn.textContent = 'Salvando...';
             const formData = new FormData(editForm);
+            // Incluir os campos que não estão no formulário mas existem na planilha
+            const service = allServices.find(s => s.ID === formData.get('ID'));
+            if (service) {
+                formData.append('OrcamentoEnviado', service.OrcamentoEnviado || 'NÃO');
+                formData.append('AvisoProntoEnviado', service.AvisoProntoEnviado || 'NÃO');
+                formData.append('Orcamento', service.Orcamento || 'SIM');
+            }
             formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
             const result = await fetchFromApi('updateService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
             if (result) {
@@ -328,7 +397,7 @@
         });
 
         document.getElementById('clearBtn').addEventListener('click', () => {
-            mainFormContainer.reset();
+            mainForm.reset();
             orcamentoInput.value = 'SIM';
             updateOrcamentoUI();
         });
@@ -350,37 +419,10 @@
             if (e.target == printModal) printModal.style.display = 'none';
         });
         document.getElementById('printReceiptBtn').addEventListener('click', () => window.print());
-    }
 
-    function initializeApp() {
-        // Injeta o HTML dos formulários para manter o corpo do HTML limpo
-        mainFormContainer.innerHTML = `<h2>Novo Cadastro</h2><div class="form-grid"><div class="form-group"><label for="Nome">Nome:</label><input type="text" id="Nome" name="Nome" required></div><div class="form-group"><label for="Telefone">Telefone:</label><input type="tel" id="Telefone" name="Telefone" required></div><div class="form-group" style="grid-column: 1 / -1;"><label for="Objetos">Objetos:</label><input type="text" id="Objetos" name="Objetos" required></div><div class="form-group" style="grid-column: 1 / -1;"><label for="DescricaoServico">Descrição do serviço:</label><textarea id="DescricaoServico" name="DescricaoServico"></textarea></div><div class="form-group"><label>É orçamento?</label><div class="button-group" id="orcamentoToggle"><button type="button" class="btn btn-toggle active" data-value="SIM">SIM</button><button type="button" class="btn btn-toggle" data-value="NÃO">NÃO</button><input type="hidden" id="Orcamento" name="Orcamento" value="SIM"></div></div><div class="form-group"><label for="PrazoDias">Prazo (dias):</label><input type="text" id="PrazoDias" name="PrazoDias"></div><div class="form-group" id="valorFormGroup"><label for="Valor">Valor (R$):</label><input type="text" id="Valor" name="Valor"></div></div><div class="actions-bar"><div class="button-group"><button type="submit" class="btn btn-primary">Adicionar Serviço</button><button type="button" id="clearBtn" class="btn btn-secondary">Limpar</button></div></div><div id="formMessage" class="message" style="display: none;"></div>`;
-        listContainer.innerHTML = `<h2>Lista de Serviços</h2><input type="text" id="searchInput" placeholder="Buscar por nome, objeto ou telefone..." style="width: calc(100% - 22px); padding: 10px; margin-bottom: 20px;"><div class="table-wrapper"><table><thead><tr><th>Nº OS</th><th>Nome</th><th>Telefone</th><th>Objetos</th><th>Entrada</th><th>Volta</th><th>Valor (R$)</th><th>Pagou?</th><th>Status</th><th>Ações</th></tr></thead><tbody id="serviceTableBody"></tbody></table></div><div id="loader" style="display: none;">Carregando dados...</div>`;
-        document.getElementById('printModal').innerHTML = `<div class="modal-content"><div class="modal-header"><span class="close-button" id="closePrintModal">&times;</span><button id="printReceiptBtn" class="btn btn-primary" style="float: left;">Imprimir</button></div><div id="printableReceipt"></div></div>`;
-        
-        // Atribui as variáveis globais aos elementos agora que eles existem no DOM
-        editForm = document.getElementById('editForm');
-        tableBody = document.getElementById('serviceTableBody');
-        loader = document.getElementById('loader');
-        searchInput = document.getElementById('searchInput');
-        formMessage = document.getElementById('formMessage');
-        editModal = document.getElementById('editModal');
-        printModal = document.getElementById('printModal');
-        orcamentoToggle = document.getElementById('orcamentoToggle');
-        valorFormGroup = document.getElementById('valorFormGroup');
-        orcamentoInput = document.getElementById('Orcamento');
-        whatsappBtn = document.getElementById('whatsappBtn');
-        readyBtn = document.getElementById('readyBtn');
-        
-        // Configura todos os event listeners
-        setupEventListeners();
-        
-        // Inicia a aplicação
         updateOrcamentoUI();
         loadAndRenderServices();
-    }
-
-    document.addEventListener('DOMContentLoaded', initializeApp);
+    });
 </script>
 </body>
 </html>
