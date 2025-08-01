@@ -31,6 +31,7 @@
         .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; vertical-align: middle; white-space: normal; }
+        /* Centraliza a coluna de Status e Ações */
         th:nth-child(8), td:nth-child(8) { text-align: center; }
         td .button-group { flex-wrap: nowrap; justify-content: center; }
         tbody tr.concluido { background-color: var(--concluido-bg) !important; }
@@ -38,8 +39,30 @@
         .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px; position: relative; }
         #editModal .form-group label { font-size: 0.85rem; }
         #editModal input, #editModal select, #editModal textarea { font-size: 0.9rem; }
-        .hidden { display: none !important; }
-        @media print { /* Estilos de impressão */ }
+        
+        /* --- ESTILOS DE IMPRESSÃO --- */
+        .receipt-header { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; }
+        .receipt-subheader { text-align: center; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .receipt-orcamento-container { position: relative; border: 2px solid black; min-height: 125mm; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .rotated-name { position: absolute; font-size: 2.2rem; font-weight: bold; white-space: nowrap; color: #555; }
+        .rn-left { left: -50px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+        .rn-right { right: -50px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+        .center-block { text-align: center; }
+        .center-name { font-size: 1.4rem; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        .center-content-orcamento { border: 1px solid #666; padding: 15px; font-size: 1rem; text-align: left; width: 90%; margin: 0 auto; }
+        .orcamento-info-message { font-size: 0.8rem; font-style: italic; text-align: center; margin-top: 15px; }
+        .receipt-copy { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; }
+        .receipt-copy:last-child { border-style: dashed; }
+        .legal-notice { font-size: 0.6rem; text-align: justify; margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
+        .signature-area { margin-top: 20px; text-align: center; } .signature-line { border-top: 1px solid black; width: 70%; margin: 0 auto; }
+        
+        @media print {
+            body > *:not(#printModal) { display: none; }
+            #printModal { position: absolute; left: 0; top: 0; width: 100%; height: auto; display: block !important; background-color: white; overflow: visible; }
+            .modal-content { box-shadow: none; border: none; width: 100%; margin: 0; padding: 0; }
+            .modal-header { display: none; }
+            .receipt-copy, .receipt-orcamento-container { page-break-inside: avoid; }
+        }
     </style>
 </head>
 <body>
@@ -54,11 +77,11 @@
         const editModal = document.getElementById('editModal');
         const printModal = document.getElementById('printModal');
         let allServices = [];
-        let mainForm, editForm, tableBody, loader, searchInput, formMessage, orcamentoToggle, valorFormGroup, prazoFormGroup, orcamentoInput, whatsappBtn, readyBtn, editStatusSelect, editPrazoFormGroup;
+        let mainForm, editForm, tableBody, loader, searchInput, formMessage, orcamentoToggle, valorFormGroup, prazoFormGroup, orcamentoInput, whatsappBtn, readyBtn;
 
         function renderMainLayoutAndGetElements() {
             mainContainer.innerHTML = `<h1>Sistema de Ordem de Serviço - PONTO 17</h1><form id="serviceForm"><h2>Novo Cadastro</h2><div class="form-grid"><div class="form-group"><label for="Nome">Nome:</label><input type="text" id="Nome" name="Nome" required></div><div class="form-group"><label for="Telefone">Telefone:</label><input type="tel" id="Telefone" name="Telefone" required></div><div class="form-group" style="grid-column: 1 / -1;"><label for="Objetos">Objetos:</label><input type="text" id="Objetos" name="Objetos" required></div><div class="form-group" style="grid-column: 1 / -1;"><label for="DescricaoServico">Descrição do serviço:</label><textarea id="DescricaoServico" name="DescricaoServico"></textarea></div><div class="form-group"><label>É orçamento?</label><div class="button-group" id="orcamentoToggle"><button type="button" class="btn btn-toggle active" data-value="SIM">SIM</button><button type="button" class="btn btn-toggle" data-value="NÃO">NÃO</button><input type="hidden" id="Orcamento" name="Orcamento" value="SIM"></div></div><div class="form-group" id="prazoFormGroup"><label for="PrazoDias">Prazo (dias úteis):</label><input type="text" id="PrazoDias" name="PrazoDias"></div><div class="form-group" id="valorFormGroup"><label for="Valor">Valor (R$):</label><input type="text" id="Valor" name="Valor"></div></div><div class="actions-bar"><div class="button-group"><button type="submit" class="btn btn-primary">Adicionar Serviço</button><button type="button" id="clearBtn" class="btn btn-secondary">Limpar</button></div></div><div id="formMessage" class="message"></div></form><div id="listContainer"><h2>Lista de Serviços</h2><input type="text" id="searchInput" placeholder="Buscar por nome, objeto ou telefone..." style="width: calc(100% - 22px); padding: 10px; margin-bottom: 20px;"><div class="table-wrapper"><table><thead><tr><th>Nº OS</th><th>Nome</th><th>Telefone</th><th>Objetos</th><th>Entrada</th><th>Volta</th><th>Valor (R$)</th><th>Status</th><th>Ações</th></tr></thead><tbody id="serviceTableBody"></tbody></table></div><div id="loader">Carregando dados...</div></div>`;
-            editModal.innerHTML = `<div class="modal-content"><div class="modal-header"><span class="close-button" id="closeEditModal">&times;</span><h2>Editar Ordem de Serviço</h2></div><form id="editForm"><input type="hidden" id="editID" name="ID"><input type="hidden" id="editDataEntrada" name="DataEntrada"><div class="form-grid"><div class="form-group"><label for="editNome">Nome:</label><input type="text" id="editNome" name="Nome" required></div><div class="form-group"><label for="editTelefone">Telefone:</label><input type="tel" id="editTelefone" name="Telefone" required></div><div class="form-group" style="grid-column: 1 / -1;"><label for="editObjetos">Objetos:</label><input type="text" id="editObjetos" name="Objetos" required></div><div class="form-group" style="grid-column: 1 / -1;"><label for="editDescricaoServico">Descrição do serviço:</label><textarea id="editDescricaoServico" name="DescricaoServico"></textarea></div><div class="form-group" id="editPrazoFormGroup"><label for="editPrazoDias">Prazo (dias úteis):</label><input type="text" id="editPrazoDias" name="PrazoDias"></div><div class="form-group"><label for="editValor">Valor (R$):</label><input type="text" id="editValor" name="Valor"></div><div class="form-group"><label for="editStatus">Status Serviço:</label><select id="editStatus" name="Status"><option value="EM ORÇAMENTO">EM ORÇAMENTO</option><option value="EM CONSERTO">EM CONSERTO</option><option value="CONCLUIDO">CONCLUIDO</option></select></div></div><div class="actions-bar"><button type="submit" class="btn btn-primary">Salvar Alterações</button><div class="button-group right-buttons"><button type="button" id="whatsappBtn" class="btn btn-whatsapp">ENVIAR ORÇAMENTO 📲</button><button type="button" id="readyBtn" class="btn btn-info">AVISAR PRONTO 📦</button></div></div></form></div>`;
+            editModal.innerHTML = `<div class="modal-content"><div class="modal-header"><span class="close-button" id="closeEditModal">&times;</span><h2>Editar Ordem de Serviço</h2></div><form id="editForm"><input type="hidden" id="editID" name="ID"><input type="hidden" id="editDataEntrada" name="DataEntrada"><input type="hidden" id="editDataPrevistaVolta" name="DataPrevistaVolta"><div class="form-grid"><div class="form-group"><label for="editNome">Nome:</label><input type="text" id="editNome" name="Nome" required></div><div class="form-group"><label for="editTelefone">Telefone:</label><input type="tel" id="editTelefone" name="Telefone" required></div><div class="form-group" style="grid-column: 1 / -1;"><label for="editObjetos">Objetos:</label><input type="text" id="editObjetos" name="Objetos" required></div><div class="form-group" style="grid-column: 1 / -1;"><label for="editDescricaoServico">Descrição do serviço:</label><textarea id="editDescricaoServico" name="DescricaoServico"></textarea></div><div class="form-group" id="editPrazoFormGroup"><label for="editPrazoDias">Prazo (dias úteis):</label><input type="text" id="editPrazoDias" name="PrazoDias"></div><div class="form-group"><label for="editValor">Valor (R$):</label><input type="text" id="editValor" name="Valor" required></div><div class="form-group"><label for="editStatus">Status Serviço:</label><select id="editStatus" name="Status"><option value="EM ORÇAMENTO">EM ORÇAMENTO</option><option value="EM CONSERTO">EM CONSERTO</option><option value="CONCLUIDO">CONCLUIDO</option></select></div></div><div class="actions-bar"><button type="submit" class="btn btn-primary">Salvar Alterações</button><div class="button-group right-buttons"><button type="button" id="whatsappBtn" class="btn btn-whatsapp">ENVIAR ORÇAMENTO 📲</button><button type="button" id="readyBtn" class="btn btn-info">AVISAR PRONTO 📦</button></div></div></form></div>`;
             printModal.innerHTML = `<div class="modal-content"><div class="modal-header"><span class="close-button" id="closePrintModal">&times;</span><button id="printReceiptBtn" class="btn btn-primary" style="float: left;">Imprimir</button></div><div id="printableReceipt"></div></div>`;
             
             mainForm = document.getElementById('serviceForm');
@@ -73,14 +96,12 @@
             orcamentoInput = document.getElementById('Orcamento');
             whatsappBtn = document.getElementById('whatsappBtn');
             readyBtn = document.getElementById('readyBtn');
-            editStatusSelect = document.getElementById('editStatus');
-            editPrazoFormGroup = document.getElementById('editPrazoFormGroup');
         }
         
         renderMainLayoutAndGetElements();
 
         const formatPhone = (value) => value.replace(/\D/g,'').replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').slice(0,15);
-        const formatCurrency = (value) => { let num = value.replace(/\D/g,''); if (num === "") return ""; return (parseInt(num, 10) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2}); };
+        const formatCurrency = (value) => { let num = String(value).replace(/\D/g,''); if (num === "") return ""; return (parseInt(num, 10) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2}); };
         const formatDateFromISO = (isoString) => { if (!isoString || typeof isoString !== 'string') return ''; const date = new Date(isoString); if (isNaN(date)) return isoString.split('T')[0]; const userTimezoneOffset = date.getTimezoneOffset() * 60000; const correctedDate = new Date(date.getTime() + userTimezoneOffset); return correctedDate.toLocaleDateString('pt-BR'); };
         
         async function fetchFromApi(action, options = {}) {
@@ -127,6 +148,19 @@
         function updateWhatsappButtonUI() { if (whatsappBtn.dataset.orcamentoEnviado === 'SIM') whatsappBtn.classList.add('clicked'); else whatsappBtn.classList.remove('clicked'); }
         function updateReadyButtonUI() { if (readyBtn.dataset.avisoProntoEnviado === 'SIM') readyBtn.classList.add('clicked'); else readyBtn.classList.remove('clicked'); }
         
+        function handleEditStatusChange() {
+            const editStatusSelect = document.getElementById('editStatus');
+            const editPrazoFormGroup = document.getElementById('editPrazoFormGroup');
+            const editPrazoInput = document.getElementById('editPrazoDias');
+            
+            if (editStatusSelect.value === 'EM ORÇAMENTO') {
+                editPrazoInput.value = '';
+                editPrazoFormGroup.style.display = 'none';
+            } else {
+                editPrazoFormGroup.style.display = 'flex';
+            }
+        }
+
         function updateOrcamentoUI() {
             const isOrcamento = orcamentoInput.value === 'SIM';
             valorFormGroup.style.display = isOrcamento ? 'none' : 'flex';
@@ -134,19 +168,6 @@
             document.getElementById('Valor').required = !isOrcamento;
             document.getElementById('PrazoDias').required = !isOrcamento;
             orcamentoToggle.querySelectorAll('.btn-toggle').forEach(btn => btn.classList.toggle('active', btn.dataset.value === orcamentoInput.value));
-        }
-
-        function handleEditStatusChange() {
-            const status = editStatusSelect.value;
-            const prazoInput = document.getElementById('editPrazoDias');
-            if (status === 'EM ORÇAMENTO') {
-                editPrazoFormGroup.classList.add('hidden');
-                prazoInput.value = '';
-                prazoInput.required = false;
-            } else {
-                editPrazoFormGroup.classList.remove('hidden');
-                prazoInput.required = true;
-            }
         }
 
         mainForm.addEventListener('submit', async e => {
@@ -197,8 +218,8 @@
                     readyBtn.dataset.avisoProntoEnviado = service.AvisoProntoEnviado || 'NÃO';
                     updateWhatsappButtonUI();
                     updateReadyButtonUI();
-                    handleEditStatusChange();
                     editModal.style.display = 'block';
+                    handleEditStatusChange(); // Handle initial state of the prazo field
                 }
             } else if (action === 'delete') {
                 if (confirm(`Tem certeza que deseja excluir a OS ${id}?`)) {
@@ -206,18 +227,31 @@
                     if (result) loadAndRenderServices();
                 }
             } else if (action === 'print') {
-                const service = allServices.find(s => s.ID === id);
+                const service = allServices.find(s => String(s.ID) === String(id));
                 if(service) {
                     const printableReceipt = document.getElementById('printableReceipt');
-                    if (service.Status === 'EM ORÇAMENTO' || service.Status === 'EM CONSERTO') {
+                    if (service.Status === 'EM ORÇAMENTO' || (service.Orcamento === 'SIM' && service.Status !== 'CONCLUIDO')) {
                         const rotatedNameHTML = `<div class="rotated-name rn-left">${service.Nome}</div><div class="rotated-name rn-right">${service.Nome}</div>`;
                         let finalMessageHTML = `<div class="orcamento-info-message">EM BREVE ENTRAREMOS EM CONTATO POR LIGAÇÃO OU POR MENSAGEM PARA MAIS INFORMAÇÕES SOBRE SEU SERVIÇO</div>`;
-                        if (service.Status === 'EM CONSERTO') {
-                            finalMessageHTML += `<div class="orcamento-info-message" style="font-weight: bold; margin-top: 5px;">PREVISÃO DE CONCLUSÃO: 5 DIAS APÓS AUTORIZAR O SERVIÇO (PAGAMENTO TOTAL OU SINAL DE 50%).</div>`;
-                        }
-                        const orcamentoContentBlock = (via) => `<div class="center-block"><div class="receipt-header">PONTO 17</div><div class="receipt-subheader">${via}</div><div class="receipt-subheader" style="font-size: 0.9rem; border-top: 1px solid #eee;">TELEFONES: 3229-8972 / 3349-3318</div><div class="center-name">${service.Nome}</div><div class="center-content-orcamento"><b>Nº OS:</b> ${service.ID}<br><b>Data de Entrada:</b> ${formatDateFromISO(service.DataEntrada)}<br><b>Telefone:</b> ${service.Telefone}<br><b>Objeto(s):</b> ${service.Objetos}<br><b>Descrição:</b> ${service.DescricaoServico || 'N/A'}</div>${finalMessageHTML}</div>`;
+                         if (service.Status === 'EM CONSERTO') {
+                             finalMessageHTML += `<div class="orcamento-info-message" style="font-weight: bold; margin-top: 5px;">PREVISÃO DE CONCLUSÃO: ${service.PrazoDias} DIAS ÚTEIS APÓS AUTORIZAR O SERVIÇO (PAGAMENTO TOTAL OU SINAL DE 50%).</div>`;
+                         }
+                        const orcamentoContentBlock = (via) => `<div class="center-block">
+                                <div class="receipt-header">PONTO 17</div>
+                                <div class="receipt-subheader">${via}</div>
+                                <div class="receipt-subheader" style="font-size: 0.9rem; border-top: 1px solid #eee;">TELEFONES: 3229-8972 / 3349-3318</div>
+                                <div class="center-name">${service.Nome}</div>
+                                <div class="center-content-orcamento">
+                                    <b>Nº OS:</b> ${service.ID}<br>
+                                    <b>Data de Entrada:</b> ${formatDateFromISO(service.DataEntrada)}<br>
+                                    <b>Telefone:</b> ${service.Telefone}<br>
+                                    <b>Objeto(s):</b> ${service.Objetos}<br>
+                                    <b>Descrição:</b> ${service.DescricaoServico || 'N/A'}
+                                </div>
+                                ${finalMessageHTML}
+                            </div>`;
                         printableReceipt.innerHTML = `<div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${orcamentoContentBlock('VIA DA LOJA')}</div></div><div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${orcamentoContentBlock('VIA DO CLIENTE')}</div></div>`;
-                    } else { // CONCLUIDO
+                    } else {
                         const legalNoticeHTML = `<div class="legal-notice">“Declaro estar ciente de que, após a notificação de conclusão do serviço, terei 30 dias para retirar o aparelho; vencido esse prazo, será cobrada taxa de guarda de R$ 1,00 por dia, e, caso não o retire em até 90 dias, autorizo o encaminhamento do bem a depósito judicial conforme a legislação vigente.”</div>`;
                         const signatureHTML = `<div class="signature-area"><div class="signature-line"></div><p>Assinatura do Cliente</p></div>`;
                         const serviceDetailsHTML = `<div class="receipt-section"><p><span class="label">Nº OS:</span> ${service.ID}</p><p><span class="label">Data de Entrada:</span> ${formatDateFromISO(service.DataEntrada)} | <span class="label">Data Prev. de Volta:</span> ${formatDateFromISO(service.DataPrevistaVolta)}</p><p><span class="label">Cliente:</span> ${service.Nome}</p><p><span class="label">Telefone:</span> ${service.Telefone}</p><p><span class="label">Objeto(s):</span> ${service.Objetos}</p><p><span class="label">Descrição do Serviço:</span> ${service.DescricaoServico || 'N/A'}</p><p><span class="label">Valor Total:</span> ${service.Valor ? 'R$ ' + parseFloat(service.Valor).toFixed(2).replace('.', ',') : 'A consultar'}</p></div>`;
@@ -233,7 +267,7 @@
             const btn = e.submitter;
             btn.disabled = true; btn.textContent = 'Salvando...';
             const formData = new FormData(editForm);
-            const service = allServices.find(s => s.ID === formData.get('ID'));
+            const service = allServices.find(s => String(s.ID) === String(formData.get('ID')));
             if (service) {
                 formData.append('OrcamentoEnviado', service.OrcamentoEnviado || 'NÃO');
                 formData.append('AvisoProntoEnviado', service.AvisoProntoEnviado || 'NÃO');
@@ -251,12 +285,12 @@
         whatsappBtn.addEventListener('click', async e => {
             e.preventDefault();
             const id = document.getElementById('editID').value;
-            const service = allServices.find(s => s.ID === id);
+            const service = allServices.find(s => String(s.ID) === String(id));
             if (!service) return;
             let telefone = service.Telefone.replace(/\D/g, '');
             if (telefone.length < 10) { alert('Número de telefone inválido.'); return; }
             if (!telefone.startsWith('55')) telefone = '55' + telefone;
-            const mensagem = `Olá, ${service.Nome}! Tudo bem?\nSegue o orçamento para o serviço do seu ${service.Objetos}:\n\n🔧 Serviço: ${document.getElementById('editDescricaoServico').value}\n💵 Valor total: R$ ${document.getElementById('editValor').value}\n\nPara autorizar o serviço é necessário o pagamento de 50% do valor total.\nO pagamento pode ser efetivado em nossa loja ou pelo nosso pix.\n\nNome da empresa: Silva e Bravim LTDA\nChave pix: 39.783.774/0001-71\n\nAo realizar o pagamento envie o comprovante e uma mensagem informando que realizou o pagamento. \n\n⚠️ Aparelhos NÃO retirados em até 90 dias (aprovados ou não) serão sucateados.\n\n📅 Previsão de entrega: ${document.getElementById('editPrazoDias').value} dias úteis após a confirmação do pagamento (pode variar conforme o serviço).\n\nQualquer dúvida, estou à disposição.\nAtenciosamente,  \nPonto 17`;
+            const mensagem = `Olá, ${service.Nome}! Tudo bem?\nSegue o orçamento para o serviço do seu ${service.Objetos}:\n\n🔧 Serviço: ${document.getElementById('editDescricaoServico').value}\n💵 Valor total: R$ ${document.getElementById('editValor').value}\n\nPara autorizar o serviço é necessário o pagamento de 50% do valor total.\nO pagamento pode ser efetivado em nossa loja ou pelo nosso pix.\n\nNome da empresa: Silva e Bravim LTDA\nChave pix: 39.783.774/0001-71\n\nAo realizar o pagamento envie o comprovante e uma mensagem informando que realizou o pagamento. \n\n⚠️ Aparelhos NÃO retirados em até 90 dias (aprovados ou não) serão sucateados.\n\n📅 Previsão de entrega: ${document.getElementById('editPrazoDias').value} dias úteis após a confirmação do pagamento (pode variar conforme o serviço).\n\nQualquer dúvida, estou à disposição.\nAtenciosamente,  \nPonto 17`;
             window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
             const result = await fetchFromApi('markBudgetAsSent', { method: 'POST', body: new URLSearchParams({ id }) });
             if (result) { whatsappBtn.dataset.orcamentoEnviado = 'SIM'; updateWhatsappButtonUI(); service.OrcamentoEnviado = 'SIM'; }
@@ -265,26 +299,33 @@
         readyBtn.addEventListener('click', async e => {
             e.preventDefault();
             const id = document.getElementById('editID').value;
-            const service = allServices.find(s => s.ID === id);
+            const service = allServices.find(s => String(s.ID) === String(id));
             if (!service) return;
             let telefone = service.Telefone.replace(/\D/g, '');
             if (telefone.length < 10) { alert('Número de telefone inválido.'); return; }
             if (!telefone.startsWith('55')) telefone = '55' + telefone;
-            const mensagem = `Olá! Esperamos que você esteja bem. 😊\n\nTemos uma ótima notícia: seu pedido está pronto para retirada! 🎉\n\nDetalhes do Pedido:\nObjeto: ${document.getElementById('editObjetos').value}\nServiço: ${document.getElementById('editDescricaoServico').value}\nValor Total: R$ ${document.getElementById('editValor').value}\n\nAgradecemos sua confiança em nossos serviços e estamos à disposição para qualquer dúvida. ⏳`;
+            const mensagem = `Olá! Esperamos que você esteja bem. 😊\n\nTemos uma ótima notícia: seu pedido está pronto para retirada! 🎉\n\nDetalhes do Pedido:\nObjeto: ${service.Objetos}\nServiço: ${service.DescricaoServico}\nValor Total: R$ ${formatCurrency(String(service.Valor))}\n\nAgradecemos sua confiança em nossos serviços e estamos à disposição para qualquer dúvida. ⏳`;
             window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
             const result = await fetchFromApi('markReadyNoticeAsSent', { method: 'POST', body: new URLSearchParams({ id }) });
             if (result) { readyBtn.dataset.avisoProntoEnviado = 'SIM'; updateReadyButtonUI(); service.AvisoProntoEnviado = 'SIM'; }
         });
 
-        editStatusSelect.addEventListener('change', handleEditStatusChange);
+        // Event Listeners
         orcamentoToggle.addEventListener('click', e => { if (e.target.matches('.btn-toggle')) { orcamentoInput.value = e.target.dataset.value; updateOrcamentoUI(); } });
         document.getElementById('clearBtn').addEventListener('click', () => { mainForm.reset(); orcamentoInput.value = 'SIM'; updateOrcamentoUI(); });
-        searchInput.addEventListener('input', e => { const searchTerm = e.target.value.toLowerCase(); renderTable(allServices.filter(s => s.Nome.toLowerCase().includes(searchTerm) || s.Objetos.toLowerCase().includes(searchTerm) || s.Telefone.toLowerCase().includes(searchTerm) || s.ID.toLowerCase().includes(searchTerm) )); });
+        searchInput.addEventListener('input', e => { const searchTerm = e.target.value.toLowerCase(); renderTable(allServices.filter(s => s.Nome.toLowerCase().includes(searchTerm) || s.Objetos.toLowerCase().includes(searchTerm) || s.Telefone.toLowerCase().includes(searchTerm) || String(s.ID).toLowerCase().includes(searchTerm) )); });
+        document.getElementById('editStatus').addEventListener('change', handleEditStatusChange);
         
+        // Add listeners for currency formatting
+        document.getElementById('Valor').addEventListener('input', (e) => { e.target.value = formatCurrency(e.target.value); });
+        document.getElementById('editValor').addEventListener('input', (e) => { e.target.value = formatCurrency(e.target.value); });
+        
+        // Listeners for modals and printing
         [document.getElementById('closeEditModal'), document.getElementById('closePrintModal')].forEach(btn => btn.addEventListener('click', (e) => { e.target.closest('.modal').style.display = 'none'; }));
         window.addEventListener('click', e => { if (e.target == editModal) editModal.style.display = 'none'; if (e.target == printModal) printModal.style.display = 'none'; });
         document.getElementById('printReceiptBtn').addEventListener('click', () => window.print());
 
+        // Initial setup
         updateOrcamentoUI();
         loadAndRenderServices();
     });
