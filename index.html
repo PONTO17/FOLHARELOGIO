@@ -213,10 +213,10 @@
                 if(service) {
                     const printableReceipt = document.getElementById('printableReceipt');
                     
-                    // Lógica de Impressão Simplificada:
-                    // Se o status for "EM ORÇAMENTO", mostra o recibo de entrada.
-                    // Para todos os outros status ("EM CONSERTO", "CONCLUIDO"), mostra o recibo final.
-                    if (service.Status === 'EM ORÇAMENTO') {
+                    // Lógica de Impressão Revertida:
+                    // "EM ORÇAMENTO" e "EM CONSERTO" usam o recibo de entrada com nomes na lateral.
+                    // "CONCLUIDO" usa o recibo final.
+                    if (service.Status === 'EM ORÇAMENTO' || service.Status === 'EM CONSERTO') {
                         const rotatedNameHTML = `<div class="rotated-name rn-left">${service.Nome}</div><div class="rotated-name rn-right">${service.Nome}</div>`;
                         let finalMessageHTML = `<div class="orcamento-info-message">EM BREVE ENTRAREMOS EM CONTATO POR LIGAÇÃO OU POR MENSAGEM PARA MAIS INFORMAÇÕES SOBRE SEU SERVIÇO</div>`;
                         const orcamentoContentBlock = (via) => `<div class="center-block">
@@ -234,7 +234,7 @@
                                 ${finalMessageHTML}
                             </div>`;
                         printableReceipt.innerHTML = `<div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${orcamentoContentBlock('VIA DA LOJA')}</div></div><div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${orcamentoContentBlock('VIA DO CLIENTE')}</div></div>`;
-                    } else { // Para "EM CONSERTO", "CONCLUIDO", etc.
+                    } else { // Para "CONCLUIDO", etc.
                         const legalNoticeHTML = `<div class="legal-notice">“Declaro estar ciente de que, após a notificação de conclusão do serviço, terei 30 dias para retirar o aparelho; vencido esse prazo, será cobrada taxa de guarda de R$ 1,00 por dia, e, caso não o retire em até 90 dias, autorizo o encaminhamento do bem a depósito judicial conforme a legislação vigente.”</div>`;
                         const signatureHTML = `<div class="signature-area"><div class="signature-line"></div><p>Assinatura do Cliente</p></div>`;
                         const serviceDetailsHTML = `<div class="receipt-section"><p><span class="label">Nº OS:</span> ${service.ID}</p><p><span class="label">Data de Entrada:</span> ${formatDateFromISO(service.DataEntrada)}</p><p><span class="label">Cliente:</span> ${service.Nome}</p><p><span class="label">Telefone:</span> ${service.Telefone}</p><p><span class="label">Objeto(s):</span> ${service.Objetos}</p><p><span class="label">Descrição do Serviço:</span> ${service.DescricaoServico || 'N/A'}</p><p><span class="label">Valor Total:</span> ${service.Valor ? 'R$ ' + parseFloat(service.Valor).toFixed(2).replace('.', ',') : 'A consultar'}</p></div>`;
