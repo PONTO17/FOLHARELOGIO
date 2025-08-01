@@ -47,7 +47,6 @@
         /* --- ESTILOS DE IMPRESSÃO --- */
         .receipt-header { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; }
         .receipt-subheader { text-align: center; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        /* Layout Orçamento / Conserto */
         .receipt-orcamento-container { position: relative; border: 2px solid black; min-height: 125mm; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .rotated-name { position: absolute; font-size: 2.2rem; font-weight: bold; white-space: nowrap; color: #555; }
         .rn-left { left: -50px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
@@ -56,7 +55,6 @@
         .center-name { font-size: 1.4rem; font-weight: bold; text-align: center; margin-bottom: 10px; }
         .center-content-orcamento { border: 1px solid #666; padding: 15px; font-size: 1rem; text-align: left; width: 90%; margin: 0 auto; }
         .orcamento-info-message { font-size: 0.8rem; font-style: italic; text-align: center; margin-top: 15px; }
-        /* Layout Recibo Padrão */
         .receipt-copy { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; }
         .receipt-copy:last-child { border-style: dashed; }
         .legal-notice { font-size: 0.6rem; text-align: justify; margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
@@ -78,7 +76,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- INICIALIZAÇÃO E VARIÁVEIS GLOBAIS ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzK7vyqG_Cvqb62QX0yQ38j4-8MxVEBhu1ZDgCQOnHe9i66UIgoaQgNuOofzOLPBiSQBg/exec";
         const mainContainer = document.getElementById('mainContainer');
         const editModal = document.getElementById('editModal');
@@ -113,9 +110,47 @@
         const formatCurrency = (value) => { let num = value.replace(/\D/g,''); if (num === "") return ""; return (parseInt(num, 10) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2}); };
         const formatDateFromISO = (isoString) => { if (!isoString || typeof isoString !== 'string') return ''; const date = new Date(isoString); if (isNaN(date)) return isoString.split('T')[0]; const userTimezoneOffset = date.getTimezoneOffset() * 60000; const correctedDate = new Date(date.getTime() + userTimezoneOffset); return correctedDate.toLocaleDateString('pt-BR'); };
         
-        async function fetchFromApi(action, options = {}) { /* ... (código existente) ... */ }
-        function renderTable(services) { /* ... (código existente) ... */ }
-        async function loadAndRenderServices() { /* ... (código existente) ... */ }
+        async function fetchFromApi(action, options = {}) {
+            const url = new URL(SCRIPT_URL);
+            url.searchParams.append('action', action);
+            if (options.params) for (const key in options.params) url.searchParams.append(key, options.params[key]);
+            try {
+                const response = await fetch(url, { method: options.method || 'GET', body: options.body });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'Erro desconhecido');
+                return result;
+            } catch (error) {
+                console.error(`Erro na ação ${action}:`, error);
+                loader.textContent = `Falha na operação: ${error.message}`;
+                return null;
+            }
+        }
+
+        function renderTable(services) {
+            tableBody.innerHTML = '';
+            if (services.length === 0) { tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum serviço encontrado.</td></tr>'; return; }
+            services.forEach(s => {
+                const paidStatusClass = (s.Pagou || '').toLowerCase().replace(' ', '-');
+                const row = document.createElement('tr');
+                if(s.Status === 'CONCLUIDO') row.classList.add('concluido');
+                row.innerHTML = `<td>${s.ID}</td><td>${s.Nome}</td><td>${s.Telefone}</td><td>${s.Objetos}</td><td>${formatDateFromISO(s.DataEntrada)}</td><td>${formatDateFromISO(s.DataPrevistaVolta)}</td><td>${s.Valor ? 'R$ ' + parseFloat(s.Valor).toFixed(2).replace('.', ',') : '-'}</td><td><div class="status-cell"><span>${s.Pagou}</span><span class="status-dot ${paidStatusClass}"></span></div></td><td>${s.Status}</td><td class="button-group"><button class="btn btn-secondary" data-action="edit" data-id="${s.ID}">Editar</button><button class="btn btn-danger" data-action="delete" data-id="${s.ID}">Excluir</button><button class="btn btn-primary" data-action="print" data-id="${s.ID}">Imprimir</button></td>`;
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function loadAndRenderServices() {
+            loader.style.display = 'block';
+            tableBody.style.display = 'none';
+            const result = await fetchFromApi('getServices');
+            loader.style.display = 'none';
+            tableBody.style.display = 'table-row-group';
+            if (result) {
+                allServices = result.data.reverse();
+                renderTable(allServices);
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color: red;">Falha ao carregar os dados.</td></tr>';
+            }
+        }
 
         function updateWhatsappButtonUI() { if (whatsappBtn.dataset.orcamentoEnviado === 'SIM') whatsappBtn.classList.add('clicked'); else whatsappBtn.classList.remove('clicked'); }
         function updateReadyButtonUI() { if (readyBtn.dataset.avisoProntoEnviado === 'SIM') readyBtn.classList.add('clicked'); else readyBtn.classList.remove('clicked'); }
@@ -129,7 +164,34 @@
             orcamentoToggle.querySelectorAll('.btn-toggle').forEach(btn => btn.classList.toggle('active', btn.dataset.value === orcamentoInput.value));
         }
 
-        mainForm.addEventListener('submit', async e => { /* ... (código existente) ... */ });
+        mainForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const btn = e.submitter;
+            btn.disabled = true; btn.textContent = 'Enviando...';
+            const formData = new FormData(mainForm);
+            const isOrcamento = orcamentoInput.value === 'SIM';
+            if (isOrcamento) {
+                formData.set('Valor', '');
+                formData.set('PrazoDias', '');
+            } else {
+                if(!formData.get('Valor') || !formData.get('PrazoDias')) {
+                    alert('Os campos Valor e Prazo são obrigatórios quando não é um orçamento.');
+                    btn.disabled = false; btn.textContent = 'Adicionar Serviço';
+                    return;
+                }
+                formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
+            }
+            const initialStatus = isOrcamento ? 'EM ORÇAMENTO' : 'EM CONSERTO';
+            formData.append('Status', initialStatus);
+            formData.append('Pagou', 'Nao pago');
+            const result = await fetchFromApi('addService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
+            if (result) {
+                mainForm.reset();
+                updateOrcamentoUI();
+                loadAndRenderServices();
+            }
+            btn.disabled = false; btn.textContent = 'Adicionar Serviço';
+        });
 
         tableBody.addEventListener('click', async e => {
             const target = e.target.closest('button');
@@ -195,9 +257,54 @@
             }
         });
 
-        editForm.addEventListener('submit', async e => { /* ... (código existente) ... */ });
-        whatsappBtn.addEventListener('click', async e => { /* ... (código existente) ... */ });
-        readyBtn.addEventListener('click', async e => { /* ... (código existente) ... */ });
+        editForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const btn = e.submitter;
+            btn.disabled = true; btn.textContent = 'Salvando...';
+            const formData = new FormData(editForm);
+            const service = allServices.find(s => s.ID === formData.get('ID'));
+            if (service) {
+                formData.append('OrcamentoEnviado', service.OrcamentoEnviado || 'NÃO');
+                formData.append('AvisoProntoEnviado', service.AvisoProntoEnviado || 'NÃO');
+                formData.append('Orcamento', service.Orcamento || 'SIM');
+            }
+            formData.set('Valor', formData.get('Valor').replace(/\./g, '').replace(',', '.'));
+            const result = await fetchFromApi('updateService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
+            if (result) {
+                editModal.style.display = 'none';
+                loadAndRenderServices();
+            }
+            btn.disabled = false; btn.textContent = 'Salvar Alterações';
+        });
+
+        whatsappBtn.addEventListener('click', async e => {
+            e.preventDefault();
+            const id = document.getElementById('editID').value;
+            const service = allServices.find(s => s.ID === id);
+            if (!service) return;
+            let telefone = service.Telefone.replace(/\D/g, '');
+            if (telefone.length < 10) { alert('Número de telefone inválido.'); return; }
+            if (!telefone.startsWith('55')) telefone = '55' + telefone;
+            const mensagem = `Olá, ${service.Nome}! Tudo bem?\nSegue o orçamento para o serviço do seu ${service.Objetos}:\n\n🔧 Serviço: ${service.DescricaoServico}\n💵 Valor total: R$ ${formatCurrency(String(service.Valor))}\n\nPara autorizar o serviço é necessário o pagamento de 50% do valor total.\nO pagamento pode ser efetivado em nossa loja ou pelo nosso pix.\n\nNome da empresa: Silva e Bravim LTDA\nChave pix: 39.783.774/0001-71\n\nAo realizar o pagamento envie o comprovante e uma mensagem informando que realizou o pagamento. \n\n⚠️ Aparelhos NÃO retirados em até 90 dias (aprovados ou não) serão sucateados.\n\n📅 Previsão de entrega: ${service.PrazoDias} dias úteis após a confirmação do pagamento (pode variar conforme o serviço).\n\nQualquer dúvida, estou à disposição.\nAtenciosamente,  \nPonto 17`;
+            window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
+            const result = await fetchFromApi('markBudgetAsSent', { method: 'POST', body: new URLSearchParams({ id }) });
+            if (result) { whatsappBtn.dataset.orcamentoEnviado = 'SIM'; updateWhatsappButtonUI(); service.OrcamentoEnviado = 'SIM'; }
+        });
+        
+        readyBtn.addEventListener('click', async e => {
+            e.preventDefault();
+            const id = document.getElementById('editID').value;
+            const service = allServices.find(s => s.ID === id);
+            if (!service) return;
+            let telefone = service.Telefone.replace(/\D/g, '');
+            if (telefone.length < 10) { alert('Número de telefone inválido.'); return; }
+            if (!telefone.startsWith('55')) telefone = '55' + telefone;
+            const mensagem = `Olá! Esperamos que você esteja bem. 😊\n\nTemos uma ótima notícia: seu pedido está pronto para retirada! 🎉\n\nDetalhes do Pedido:\nObjeto: ${service.Objetos}\nServiço: ${service.DescricaoServico}\nValor Total: R$ ${formatCurrency(String(service.Valor))}\n\nAgradecemos sua confiança em nossos serviços e estamos à disposição para qualquer dúvida. ⏳`;
+            window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
+            const result = await fetchFromApi('markReadyNoticeAsSent', { method: 'POST', body: new URLSearchParams({ id }) });
+            if (result) { readyBtn.dataset.avisoProntoEnviado = 'SIM'; updateReadyButtonUI(); service.AvisoProntoEnviado = 'SIM'; }
+        });
+
         editPagouSelect.addEventListener('change', updatePaidStatusDot);
         orcamentoToggle.addEventListener('click', e => { if (e.target.matches('.btn-toggle')) { orcamentoInput.value = e.target.dataset.value; updateOrcamentoUI(); } });
         document.getElementById('clearBtn').addEventListener('click', () => { mainForm.reset(); orcamentoInput.value = 'SIM'; updateOrcamentoUI(); });
