@@ -31,7 +31,7 @@
         .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; vertical-align: middle; white-space: normal; }
-        th:nth-child(8), td:nth-child(8) { text-align: center; } /* Status */
+        th:nth-child(8), td:nth-child(8) { text-align: center; }
         td .button-group { flex-wrap: nowrap; justify-content: center; }
         tbody tr.concluido { background-color: var(--concluido-bg) !important; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,.5); }
@@ -39,7 +39,7 @@
         #editModal .form-group label { font-size: 0.85rem; }
         #editModal input, #editModal select, #editModal textarea { font-size: 0.9rem; }
         .hidden { display: none !important; }
-        @media print { /* ... (código de impressão existente sem alterações) ... */ }
+        @media print { /* Estilos de impressão */ }
     </style>
 </head>
 <body>
@@ -83,7 +83,21 @@
         const formatCurrency = (value) => { let num = value.replace(/\D/g,''); if (num === "") return ""; return (parseInt(num, 10) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2}); };
         const formatDateFromISO = (isoString) => { if (!isoString || typeof isoString !== 'string') return ''; const date = new Date(isoString); if (isNaN(date)) return isoString.split('T')[0]; const userTimezoneOffset = date.getTimezoneOffset() * 60000; const correctedDate = new Date(date.getTime() + userTimezoneOffset); return correctedDate.toLocaleDateString('pt-BR'); };
         
-        async function fetchFromApi(action, options = {}) { /* ... (código existente) ... */ }
+        async function fetchFromApi(action, options = {}) {
+            const url = new URL(SCRIPT_URL);
+            url.searchParams.append('action', action);
+            if (options.params) for (const key in options.params) url.searchParams.append(key, options.params[key]);
+            try {
+                const response = await fetch(url, { method: options.method || 'GET', body: options.body });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'Erro desconhecido');
+                return result;
+            } catch (error) {
+                console.error(`Erro na ação ${action}:`, error);
+                loader.textContent = `Falha na operação: ${error.message}`;
+                return null;
+            }
+        }
 
         function renderTable(services) {
             tableBody.innerHTML = '';
@@ -96,7 +110,20 @@
             });
         }
 
-        async function loadAndRenderServices() { /* ... (código existente) ... */ }
+        async function loadAndRenderServices() {
+            loader.style.display = 'block';
+            tableBody.style.display = 'none';
+            const result = await fetchFromApi('getServices');
+            loader.style.display = 'none';
+            tableBody.style.display = 'table-row-group';
+            if (result) {
+                allServices = result.data.reverse();
+                renderTable(allServices);
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: red;">Falha ao carregar os dados.</td></tr>';
+            }
+        }
+
         function updateWhatsappButtonUI() { if (whatsappBtn.dataset.orcamentoEnviado === 'SIM') whatsappBtn.classList.add('clicked'); else whatsappBtn.classList.remove('clicked'); }
         function updateReadyButtonUI() { if (readyBtn.dataset.avisoProntoEnviado === 'SIM') readyBtn.classList.add('clicked'); else readyBtn.classList.remove('clicked'); }
         
@@ -170,7 +197,7 @@
                     readyBtn.dataset.avisoProntoEnviado = service.AvisoProntoEnviado || 'NÃO';
                     updateWhatsappButtonUI();
                     updateReadyButtonUI();
-                    handleEditStatusChange(); // Aplica a lógica de visibilidade ao abrir
+                    handleEditStatusChange();
                     editModal.style.display = 'block';
                 }
             } else if (action === 'delete') {
@@ -178,7 +205,27 @@
                     const result = await fetchFromApi('deleteService', { method: 'POST', body: new URLSearchParams({ id }) });
                     if (result) loadAndRenderServices();
                 }
-            } else if (action === 'print') { /* ... (código de impressão existente) ... */ }
+            } else if (action === 'print') {
+                const service = allServices.find(s => s.ID === id);
+                if(service) {
+                    const printableReceipt = document.getElementById('printableReceipt');
+                    if (service.Status === 'EM ORÇAMENTO' || service.Status === 'EM CONSERTO') {
+                        const rotatedNameHTML = `<div class="rotated-name rn-left">${service.Nome}</div><div class="rotated-name rn-right">${service.Nome}</div>`;
+                        let finalMessageHTML = `<div class="orcamento-info-message">EM BREVE ENTRAREMOS EM CONTATO POR LIGAÇÃO OU POR MENSAGEM PARA MAIS INFORMAÇÕES SOBRE SEU SERVIÇO</div>`;
+                        if (service.Status === 'EM CONSERTO') {
+                            finalMessageHTML += `<div class="orcamento-info-message" style="font-weight: bold; margin-top: 5px;">PREVISÃO DE CONCLUSÃO: 5 DIAS APÓS AUTORIZAR O SERVIÇO (PAGAMENTO TOTAL OU SINAL DE 50%).</div>`;
+                        }
+                        const orcamentoContentBlock = (via) => `<div class="center-block"><div class="receipt-header">PONTO 17</div><div class="receipt-subheader">${via}</div><div class="receipt-subheader" style="font-size: 0.9rem; border-top: 1px solid #eee;">TELEFONES: 3229-8972 / 3349-3318</div><div class="center-name">${service.Nome}</div><div class="center-content-orcamento"><b>Nº OS:</b> ${service.ID}<br><b>Data de Entrada:</b> ${formatDateFromISO(service.DataEntrada)}<br><b>Telefone:</b> ${service.Telefone}<br><b>Objeto(s):</b> ${service.Objetos}<br><b>Descrição:</b> ${service.DescricaoServico || 'N/A'}</div>${finalMessageHTML}</div>`;
+                        printableReceipt.innerHTML = `<div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${orcamentoContentBlock('VIA DA LOJA')}</div></div><div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${orcamentoContentBlock('VIA DO CLIENTE')}</div></div>`;
+                    } else { // CONCLUIDO
+                        const legalNoticeHTML = `<div class="legal-notice">“Declaro estar ciente de que, após a notificação de conclusão do serviço, terei 30 dias para retirar o aparelho; vencido esse prazo, será cobrada taxa de guarda de R$ 1,00 por dia, e, caso não o retire em até 90 dias, autorizo o encaminhamento do bem a depósito judicial conforme a legislação vigente.”</div>`;
+                        const signatureHTML = `<div class="signature-area"><div class="signature-line"></div><p>Assinatura do Cliente</p></div>`;
+                        const serviceDetailsHTML = `<div class="receipt-section"><p><span class="label">Nº OS:</span> ${service.ID}</p><p><span class="label">Data de Entrada:</span> ${formatDateFromISO(service.DataEntrada)} | <span class="label">Data Prev. de Volta:</span> ${formatDateFromISO(service.DataPrevistaVolta)}</p><p><span class="label">Cliente:</span> ${service.Nome}</p><p><span class="label">Telefone:</span> ${service.Telefone}</p><p><span class="label">Objeto(s):</span> ${service.Objetos}</p><p><span class="label">Descrição do Serviço:</span> ${service.DescricaoServico || 'N/A'}</p><p><span class="label">Valor Total:</span> ${service.Valor ? 'R$ ' + parseFloat(service.Valor).toFixed(2).replace('.', ',') : 'A consultar'}</p></div>`;
+                        printableReceipt.innerHTML = `<div class="receipt-copy"><div class="receipt-header">PONTO 17</div><div class="receipt-subheader">VIA DA LOJA</div>${serviceDetailsHTML}${legalNoticeHTML}${signatureHTML}</div><div class="receipt-copy"><div class="receipt-header">PONTO 17</div><div class="receipt-subheader">VIA DO CLIENTE</div>${serviceDetailsHTML}${legalNoticeHTML}${signatureHTML}</div>`;
+                    }
+                    printModal.style.display = 'block';
+                }
+            }
         });
 
         editForm.addEventListener('submit', async e => {
@@ -201,9 +248,34 @@
             btn.disabled = false; btn.textContent = 'Salvar Alterações';
         });
 
-        whatsappBtn.addEventListener('click', async e => { /* ... (código existente) ... */ });
-        readyBtn.addEventListener('click', async e => { /* ... (código existente) ... */ });
+        whatsappBtn.addEventListener('click', async e => {
+            e.preventDefault();
+            const id = document.getElementById('editID').value;
+            const service = allServices.find(s => s.ID === id);
+            if (!service) return;
+            let telefone = service.Telefone.replace(/\D/g, '');
+            if (telefone.length < 10) { alert('Número de telefone inválido.'); return; }
+            if (!telefone.startsWith('55')) telefone = '55' + telefone;
+            const mensagem = `Olá, ${service.Nome}! Tudo bem?\nSegue o orçamento para o serviço do seu ${service.Objetos}:\n\n🔧 Serviço: ${document.getElementById('editDescricaoServico').value}\n💵 Valor total: R$ ${document.getElementById('editValor').value}\n\nPara autorizar o serviço é necessário o pagamento de 50% do valor total.\nO pagamento pode ser efetivado em nossa loja ou pelo nosso pix.\n\nNome da empresa: Silva e Bravim LTDA\nChave pix: 39.783.774/0001-71\n\nAo realizar o pagamento envie o comprovante e uma mensagem informando que realizou o pagamento. \n\n⚠️ Aparelhos NÃO retirados em até 90 dias (aprovados ou não) serão sucateados.\n\n📅 Previsão de entrega: ${document.getElementById('editPrazoDias').value} dias úteis após a confirmação do pagamento (pode variar conforme o serviço).\n\nQualquer dúvida, estou à disposição.\nAtenciosamente,  \nPonto 17`;
+            window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
+            const result = await fetchFromApi('markBudgetAsSent', { method: 'POST', body: new URLSearchParams({ id }) });
+            if (result) { whatsappBtn.dataset.orcamentoEnviado = 'SIM'; updateWhatsappButtonUI(); service.OrcamentoEnviado = 'SIM'; }
+        });
         
+        readyBtn.addEventListener('click', async e => {
+            e.preventDefault();
+            const id = document.getElementById('editID').value;
+            const service = allServices.find(s => s.ID === id);
+            if (!service) return;
+            let telefone = service.Telefone.replace(/\D/g, '');
+            if (telefone.length < 10) { alert('Número de telefone inválido.'); return; }
+            if (!telefone.startsWith('55')) telefone = '55' + telefone;
+            const mensagem = `Olá! Esperamos que você esteja bem. 😊\n\nTemos uma ótima notícia: seu pedido está pronto para retirada! 🎉\n\nDetalhes do Pedido:\nObjeto: ${document.getElementById('editObjetos').value}\nServiço: ${document.getElementById('editDescricaoServico').value}\nValor Total: R$ ${document.getElementById('editValor').value}\n\nAgradecemos sua confiança em nossos serviços e estamos à disposição para qualquer dúvida. ⏳`;
+            window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
+            const result = await fetchFromApi('markReadyNoticeAsSent', { method: 'POST', body: new URLSearchParams({ id }) });
+            if (result) { readyBtn.dataset.avisoProntoEnviado = 'SIM'; updateReadyButtonUI(); service.AvisoProntoEnviado = 'SIM'; }
+        });
+
         editStatusSelect.addEventListener('change', handleEditStatusChange);
         orcamentoToggle.addEventListener('click', e => { if (e.target.matches('.btn-toggle')) { orcamentoInput.value = e.target.dataset.value; updateOrcamentoUI(); } });
         document.getElementById('clearBtn').addEventListener('click', () => { mainForm.reset(); orcamentoInput.value = 'SIM'; updateOrcamentoUI(); });
