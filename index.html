@@ -43,44 +43,20 @@
         .receipt-header { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; }
         .receipt-subheader { text-align: center; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .receipt-orcamento-container { position: relative; border: 2px solid black; min-height: 125mm; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
-        
-        /* CSS CORRIGIDO E FINAL PARA NOMES ROTACIONADOS */
-        .rotated-name {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 3rem; /* Espaço entre a borda e o conteúdo central */
-        }
-        .rn-left {
-            left: 0;
-        }
-        .rn-right {
-            right: 0;
-        }
-        .rotated-name > span {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform-origin: center;
-            transform: translate(-50%, -50%) rotate(-90deg);
-            font-size: 2.2rem;
-            font-weight: bold;
-            color: #555;
-            white-space: nowrap;
-        }
-        .rn-right > span {
-            transform: translate(-50%, -50%) rotate(90deg);
-        }
-        /* FIM DA CORREÇÃO */
-
+        .rotated-name { position: absolute; top: 0; bottom: 0; width: 3rem; display: flex; align-items: center; justify-content: center; }
+        .rotated-name > span { font-size: 2.2rem; font-weight: bold; color: #555; white-space: nowrap; }
+        .rn-left { left: 0; }
+        .rn-left > span { transform: rotate(-90deg); }
+        .rn-right { right: 0; }
+        .rn-right > span { transform: rotate(90deg); }
         .center-block { text-align: center; }
         .center-name { font-size: 1.4rem; font-weight: bold; text-align: center; margin-bottom: 10px; }
         .center-content-orcamento { border: 1px solid #666; padding: 15px; font-size: 1rem; text-align: left; width: 85%; margin: 0 auto; }
-        .orcamento-info-message { font-size: 0.8rem; font-style: italic; text-align: center; margin-top: 15px; }
-        .receipt-copy { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; }
-        .receipt-copy:last-child { border-style: dashed; }
-        .legal-notice { font-size: 0.6rem; text-align: justify; margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
-        .signature-area { margin-top: 20px; text-align: center; } .signature-line { border-top: 1px solid black; width: 70%; margin: 0 auto; }
+        .print-footer { padding: 0 15px; } /* Adicionado para alinhar o rodapé com o conteúdo */
+        .print-footer .orcamento-info-message,
+        .print-footer .legal-notice { font-size: 0.7rem; text-align: justify; margin-top: 10px; }
+        .print-footer .signature-area { margin-top: 25px; text-align: center; } 
+        .print-footer .signature-line { border-top: 1px solid black; width: 70%; margin: 0 auto; }
         
         @media print {
             body > *:not(#printModal) { display: none; }
@@ -240,18 +216,21 @@
                     const printableReceipt = document.getElementById('printableReceipt');
                     
                     const rotatedNameHTML = `<div class="rotated-name rn-left"><span>${service.Nome}</span></div><div class="rotated-name rn-right"><span>${service.Nome}</span></div>`;
-                    const legalNoticeHTML = `<div class="legal-notice">“Declaro estar ciente de que, após a notificação de conclusão do serviço, terei 30 dias para retirar o aparelho; vencido esse prazo, será cobrada taxa de guarda de R$ 1,00 por dia, e, caso não o retire em até 90 dias, autorizo o encaminhamento do bem a depósito judicial conforme a legislação vigente.”</div><div class="signature-area"><div class="signature-line"></div><p>Assinatura do Cliente</p></div>`;
-                    const orcamentoMessageHTML = `<div class="orcamento-info-message">EM BREVE ENTRAREMOS EM CONTATO POR LIGAÇÃO OU POR MENSAGEM PARA MAIS INFORMAÇÕES SOBRE SEU SERVIÇO</div>`;
                     
-                    let footerHTML = orcamentoMessageHTML;
-                    if (service.Status === 'CONCLUIDO') {
-                        footerHTML = legalNoticeHTML;
-                    }
+                    const standardFooterHTML = `
+                        <div class="print-footer">
+                            <p class="orcamento-info-message">EM BREVE ENTRAREMOS EM CONTATO POR LIGAÇÃO OU POR MENSAGEM PARA MAIS INFORMAÇÕES SOBRE SEU SERVIÇO</p>
+                            <p class="orcamento-info-message" style="font-weight: bold;">PREVISÃO DE CONCLUSÃO: 5 DIAS APÓS AUTORIZAR O SERVIÇO (EFETUAR O PAGAMENTO TOTAL OU SINAL DE 50%)</p>
+                            <p class="legal-notice">Declaro estar ciente de que, após a notificação de conclusão do serviço, terei 30 dias para retirar o aparelho; vencido esse prazo, será cobrada taxa de guarda de R$ 1,00 por dia, e, caso não o retire em até 90 dias, autorizo o encaminhamento do bem a depósito judicial conforme a legislação vigente.</p>
+                            <div class="signature-area">
+                                <div class="signature-line"></div>
+                                <p>Assinatura do Cliente</p>
+                            </div>
+                        </div>`;
 
-                    const universalContentBlock = (via) => `<div class="center-block">
+                    const universalContentBlock = () => `<div class="center-block">
                             <div class="receipt-header">PONTO 17</div>
-                            <div class="receipt-subheader">${via}</div>
-                            <div class="receipt-subheader" style="font-size: 0.9rem; border-top: 1px solid #eee;">TELEFONES: 3229-8972 / 3349-3318</div>
+                            <div class="receipt-subheader" style="font-size: 0.9rem;">TELEFONES: 3229-8972 / 3349-3318</div>
                             <div class="center-name">${service.Nome}</div>
                             <div class="center-content-orcamento">
                                 <b>Nº OS:</b> ${service.ID}<br>
@@ -261,10 +240,10 @@
                                 <b>Descrição:</b> ${service.DescricaoServico || 'N/A'}<br>
                                 <b>Valor Total:</b> ${service.Valor ? 'R$ ' + parseFloat(service.Valor).toFixed(2).replace('.', ',') : 'A consultar'}
                             </div>
-                            ${footerHTML}
+                            ${standardFooterHTML}
                         </div>`;
                     
-                    printableReceipt.innerHTML = `<div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${universalContentBlock('VIA DA LOJA')}</div></div><div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${universalContentBlock('VIA DO CLIENTE')}</div></div>`;
+                    printableReceipt.innerHTML = `<div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${universalContentBlock()}</div></div><div class="receipt-copy"><div class="receipt-orcamento-container">${rotatedNameHTML}${universalContentBlock()}</div></div>`;
                     
                     printModal.style.display = 'block';
                 }
