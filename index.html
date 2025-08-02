@@ -43,10 +43,11 @@
         /* --- ESTILOS DE IMPRESSÃO --- */
         .receipt-header { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; }
         .receipt-subheader { text-align: center; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .receipt-orcamento-container { position: relative; border: 2px solid black; min-height: 125mm; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .receipt-orcamento-container { position: relative; border: 2px solid black; min-height: 125mm; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
         .rotated-name { position: absolute; font-size: 2.2rem; font-weight: bold; white-space: nowrap; color: #555; }
-        .rn-left { left: -50px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
-        .rn-right { right: -50px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+        /* CORRIGIDO: Posicionamento dos nomes para ficarem próximos às bordas */
+        .rn-left { left: 10px; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: left top; }
+        .rn-right { right: 10px; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: right top; }
         .center-block { text-align: center; }
         .center-name { font-size: 1.4rem; font-weight: bold; text-align: center; margin-bottom: 10px; }
         .center-content-orcamento { border: 1px solid #666; padding: 15px; font-size: 1rem; text-align: left; width: 90%; margin: 0 auto; }
@@ -213,9 +214,6 @@
                 if(service) {
                     const printableReceipt = document.getElementById('printableReceipt');
                     
-                    // Lógica de Impressão Revertida:
-                    // "EM ORÇAMENTO" e "EM CONSERTO" usam o recibo de entrada com nomes na lateral.
-                    // "CONCLUIDO" usa o recibo final.
                     if (service.Status === 'EM ORÇAMENTO' || service.Status === 'EM CONSERTO') {
                         const rotatedNameHTML = `<div class="rotated-name rn-left">${service.Nome}</div><div class="rotated-name rn-right">${service.Nome}</div>`;
                         let finalMessageHTML = `<div class="orcamento-info-message">EM BREVE ENTRAREMOS EM CONTATO POR LIGAÇÃO OU POR MENSAGEM PARA MAIS INFORMAÇÕES SOBRE SEU SERVIÇO</div>`;
@@ -276,7 +274,11 @@
             const mensagem = `Olá, ${service.Nome}! Tudo bem?\nSegue o orçamento para o serviço do seu ${service.Objetos}:\n\n🔧 Serviço: ${document.getElementById('editDescricaoServico').value}\n💵 Valor total: R$ ${document.getElementById('editValor').value}\n\nPara autorizar o serviço é necessário o pagamento de 50% do valor total.\nO pagamento pode ser efetivado em nossa loja ou pelo nosso pix.\n\nNome da empresa: Silva e Bravim LTDA\nChave pix: 39.783.774/0001-71\n\nAo realizar o pagamento envie o comprovante e uma mensagem informando que realizou o pagamento. \n\n⚠️ Aparelhos NÃO retirados em até 90 dias (aprovados ou não) serão sucateados.\n\nQualquer dúvida, estou à disposição.\nAtenciosamente,  \nPonto 17`;
             window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
             const result = await fetchFromApi('markBudgetAsSent', { method: 'POST', body: new URLSearchParams({ id }) });
-            if (result) { whatsappBtn.dataset.orcamentoEnviado = 'SIM'; updateWhatsappButtonUI(); service.OrcamentoEnviado = 'SIM'; }
+            if (result) { 
+                whatsappBtn.dataset.orcamentoEnviado = 'SIM'; 
+                updateWhatsappButtonUI(); 
+                service.OrcamentoEnviado = 'SIM'; 
+            }
         });
         
         readyBtn.addEventListener('click', async e => {
@@ -290,7 +292,11 @@
             const mensagem = `Olá! Esperamos que você esteja bem. 😊\n\nTemos uma ótima notícia: seu pedido está pronto para retirada! 🎉\n\nDetalhes do Pedido:\nObjeto: ${service.Objetos}\nServiço: ${service.DescricaoServico}\nValor Total: R$ ${formatCurrency(String(service.Valor))}\n\nAgradecemos sua confiança em nossos serviços e estamos à disposição para qualquer dúvida. ⏳`;
             window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
             const result = await fetchFromApi('markReadyNoticeAsSent', { method: 'POST', body: new URLSearchParams({ id }) });
-            if (result) { readyBtn.dataset.avisoProntoEnviado = 'SIM'; updateReadyButtonUI(); service.AvisoProntoEnviado = 'SIM'; }
+            if (result) { 
+                readyBtn.dataset.avisoProntoEnviado = 'SIM'; 
+                updateReadyButtonUI(); 
+                service.AvisoProntoEnviado = 'SIM'; 
+            }
         });
 
         // Event Listeners
