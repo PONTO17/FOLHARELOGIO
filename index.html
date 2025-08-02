@@ -40,9 +40,8 @@
         #editModal input, #editModal select, #editModal textarea { font-size: 0.9rem; }
         
         /* --- ESTILOS DE IMPRESSÃO --- */
-        .receipt-header { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; }
-        .receipt-subheader { text-align: center; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .receipt-orcamento-container { position: relative; border: 2px solid black; min-height: 125mm; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        .receipt-header { text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; }
+        .receipt-orcamento-container { position: relative; border: 2px solid black; min-height: 115mm; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
         .rotated-name { position: absolute; top: 0; bottom: 0; width: 3rem; display: flex; align-items: center; justify-content: center; }
         .rotated-name > span { font-size: 2.2rem; font-weight: bold; color: #555; white-space: nowrap; }
         .rn-left { left: 0; }
@@ -55,8 +54,11 @@
         .print-footer { padding: 0 15px; }
         .print-footer .orcamento-info-message,
         .print-footer .legal-notice { font-size: 0.7rem; text-align: justify; margin-top: 10px; }
-        .print-footer .signature-area { margin-top: 25px; text-align: center; } 
-        .print-footer .signature-line { border-top: 1px solid black; width: 70%; margin: 0 auto; }
+        .signatures-container { display: flex; justify-content: space-between; margin-top: 30px; }
+        .print-footer .signature-area { width: 45%; text-align: center; } 
+        .print-footer .signature-line { border-top: 1px solid black; width: 100%; margin: 0 auto; }
+        .receipt-copy { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; }
+        .receipt-copy:last-child { border-style: dashed; }
         
         @media print {
             body > *:not(#printModal) { display: none; }
@@ -222,19 +224,20 @@
                             <p class="orcamento-info-message">EM BREVE ENTRAREMOS EM CONTATO POR LIGAÇÃO OU POR MENSAGEM PARA MAIS INFORMAÇÕES SOBRE SEU SERVIÇO</p>
                             <p class="orcamento-info-message" style="font-weight: bold;">PREVISÃO DE CONCLUSÃO: 5 DIAS APÓS AUTORIZAR O SERVIÇO (EFETUAR O PAGAMENTO TOTAL OU SINAL DE 50%)</p>
                             <p class="legal-notice">Declaro estar ciente de que, após a notificação de conclusão do serviço, terei 30 dias para retirar o aparelho; vencido esse prazo, será cobrada taxa de guarda de R$ 1,00 por dia, e, caso não o retire em até 90 dias, autorizo o encaminhamento do bem a depósito judicial conforme a legislação vigente.</p>
-                            <div class="signature-area">
-                                <div class="signature-line"></div>
-                                <p>Assinatura do Cliente</p>
-                            </div>
-                            <div class="signature-area" style="margin-top: 40px;">
-                                <div class="signature-line"></div>
-                                <p>OBJETO RETIRADO</p>
+                            <div class="signatures-container">
+                                <div class="signature-area">
+                                    <div class="signature-line"></div>
+                                    <p>Assinatura do Cliente</p>
+                                </div>
+                                <div class="signature-area">
+                                    <div class="signature-line"></div>
+                                    <p>OBJETO RETIRADO</p>
+                                </div>
                             </div>
                         </div>`;
 
                     const universalContentBlock = () => `<div class="center-block">
-                            <div class="receipt-header">PONTO 17</div>
-                            <div class="receipt-subheader" style="font-size: 0.9rem;">TELEFONES: 3229-8972 / 3349-3318</div>
+                            <div class="receipt-header">PONTO 17 <span style="font-size: 0.9rem; font-weight: normal; vertical-align: middle;">- TELEFONES: 3229-8972 / 3349-3318</span></div>
                             <div class="center-name">${service.Nome}</div>
                             <div class="center-content-orcamento">
                                 <b>Nº OS:</b> ${service.ID}<br>
@@ -269,7 +272,6 @@
             const result = await fetchFromApi('updateService', { method: 'POST', body: new URLSearchParams(Object.fromEntries(formData)) });
             if (result) {
                 editModal.style.display = 'none';
-                // ATUALIZADO: Recarrega os dados para refletir a possível mudança de data
                 loadAndRenderServices();
             }
             btn.disabled = false; btn.textContent = 'Salvar Alterações';
